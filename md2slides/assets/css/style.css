@@ -202,6 +202,7 @@ textarea#markdownInput {
     outline: none;
     resize: none;
     padding: 14px;
+    box-sizing: border-box;
     font-size: 14px;
     line-height: 1.5;
     background: transparent;
@@ -375,6 +376,129 @@ textarea#markdownInput {
     border-left: 4px solid var(--blockquote-border);
     padding: 10px 14px;
     border-radius: 10px;
+    margin: 8px 0 10px;
+}
+
+/* Markdown 表格样式 */
+.slide table.md-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 22px;
+}
+
+.slide table.md-table th,
+.slide table.md-table td {
+    border: 1px solid var(--outline);
+    padding: 8px 10px;
+    text-align: left;
+}
+
+.slide table.md-table th {
+    background: var(--surface);
+    color: var(--slide-title);
+    font-weight: 700;
+}
+
+/* Admonition blocks */
+.slide .admonition {
+    margin: 18px 0;
+    padding: 12px 12px 10px 12px;
+    overflow: hidden;
+    font-size: 18px;
+    border-left: 5px solid var(--accent);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    background: var(--surface);
+}
+
+.slide .admonition-title {
+    position: relative;
+    margin: -12px -12px 10px -12px !important;
+    padding: 10px 12px 10px 38px;
+    font-weight: 800;
+    background: rgba(15, 98, 254, 0.08);
+    color: var(--slide-title);
+}
+
+.slide .admonition-title::before {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    width: 12px;
+    height: 12px;
+    transform: translateY(-50%);
+    background-color: var(--accent);
+    border-radius: 50%;
+    content: ' ';
+}
+
+.slide .admonition-content {
+    padding-left: 4px;
+}
+
+.slide .admonition.note {
+    border-color: #42b983;
+}
+
+.slide .admonition.note>.admonition-title {
+    background: rgba(66, 185, 131, .12);
+}
+
+.slide .admonition.note>.admonition-title::before {
+    background: #42b983;
+}
+
+.slide .admonition.tip {
+    border-color: #00b8d4;
+}
+
+.slide .admonition.tip>.admonition-title {
+    background: rgba(0, 184, 212, .12);
+}
+
+.slide .admonition.tip>.admonition-title::before {
+    background: #00b8d4;
+}
+
+.slide .admonition.important {
+    border-color: #6f42c1;
+}
+
+.slide .admonition.important>.admonition-title {
+    background: rgba(111, 66, 193, .12);
+}
+
+.slide .admonition.important>.admonition-title::before {
+    background: #6f42c1;
+}
+
+.slide .admonition.warning {
+    border-color: #ff9100;
+}
+
+.slide .admonition.warning>.admonition-title {
+    background: rgba(255, 145, 0, .12);
+}
+
+.slide .admonition.warning>.admonition-title::before {
+    background: #ff9100;
+}
+
+.slide .admonition.caution {
+    border-color: #d73a49;
+}
+
+.slide .admonition.caution>.admonition-title {
+    background: rgba(215, 58, 73, .12);
+}
+
+.slide .admonition.caution>.admonition-title::before {
+    background: #d73a49;
+}
+
+.slide .admonition>:last-child {
+    margin-bottom: 0 !important;
 }
 
 .slide .subtitle {
@@ -401,7 +525,7 @@ textarea#markdownInput {
     gap: 8px;
     padding: 6px 10px;
     border-radius: 999px;
-    background: color-mix(in oklab, var(--surface), transparent 20%);
+    background: var(--surface);
     border: 1px solid var(--outline);
     color: var(--muted);
     font-size: 12px;
@@ -416,11 +540,14 @@ textarea#markdownInput {
     height: 44px;
     border-radius: 50%;
     border: 1px solid var(--outline);
-    background: color-mix(in oklab, var(--surface), transparent 10%);
+    background: var(--surface);
     display: grid;
     place-items: center;
     cursor: pointer;
     box-shadow: var(--shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease-in-out;
 }
 
 .nav-btn:hover {
@@ -438,6 +565,14 @@ textarea#markdownInput {
 
 .nav-next {
     right: 24px;
+}
+
+/* 舞台区域悬停或按钮聚焦时显示左右导航键 */
+.preview-container.nav-visible .nav-btn,
+.preview-container .nav-btn:focus-visible,
+.preview-container .nav-btn:hover {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .progressbar {

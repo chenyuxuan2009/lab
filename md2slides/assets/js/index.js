@@ -15,6 +15,7 @@
         prev: $('#prevBtn'),
         next: $('#nextBtn'),
         fullscreenTop: $('#fullscreenTop'),
+        stageWrapper: document.querySelector('.stage-wrapper'),
     };
 
     const SAMPLE = `# Markdown → Slides\nA clean, business-ready deck from plain text.\n\nPresenter: Jane Doe\nCompany: Example Corp\n\n---\n\n## Agenda\n- Why Markdown slides\n- How it works\n- Live demo\n- Tips\n- Q&A\n\n---\n\n## Why Markdown?\n- Focus on content, not formatting\n- Version control friendly\n- Quickly iterate and collaborate\n- Portable: works anywhere with a browser\n\n---\n\n## Formatting essentials\n- Emphasis with **bold** and *italic*\n- Links like [OpenAI](https://openai.com) and images below\n- Inline code: \`npm start\`\n- Code blocks:\n\n\`\`\`js\nfunction hello(name) {\n  console.log('Hello, ' + name + '!');\n}\nhello('world');\n\`\`\`\n\n---\n\n## Visuals\n![Chart](https://dummyimage.com/960x320/4b9cd3/ffffff&text=Business+Chart)\n\n- Add images to support your narrative\n- Keep slides focused and uncluttered\n\n---\n\n## Tips for great slides\n1. One idea per slide\n2. Use readable font sizes\n3. Contrast matters\n4. Keep code snippets small\n\n> Pro tip: Press F for fullscreen, use ← → to navigate.\n\n---\n\n# Thank you\n\nQuestions?\n`;
@@ -68,6 +69,12 @@
 
     dom.prev.addEventListener('click', prevSlide);
     dom.next.addEventListener('click', nextSlide);
+
+    // 仅在舞台区域悬停时显示左右按钮
+    if (dom.stageWrapper) {
+        dom.stageWrapper.addEventListener('mouseenter', () => dom.preview.classList.add('nav-visible'));
+    }
+    dom.preview.addEventListener('mouseleave', () => dom.preview.classList.remove('nav-visible'));
 
     // dom.preview.addEventListener('dblclick', toggleFullscreen);
     // dom.preview.addEventListener('keydown', handleKey);
@@ -228,17 +235,20 @@
             codeBlocks.push(`<pre class="code"><code${langClass}>${escapeHtml(code)}</code></pre>`);
             return `\uE000CODEBLOCK${i}\uE000`;
         });
+        // 3. 处理提示块（> [!NOTE] 这类）
+        let admonitions = [];
+        ({ text, admonitions } = transformAdmonitions(text));
 
-        // 3. 块级转换
+        // 4. 块级转换
         text = blockify(text);
 
-        // 4. 内联转换
+        // 5. 内联转换
         text = inlineify(text);
 
-        // 5. 恢复代码块
+        // 6. 恢复代码块
         text = text.replace(/\uE000CODEBLOCK(\d+)\uE000/g, (_, i) => codeBlocks[Number(i)] || '');
 
-        // 6. 恢复 LaTeX 公式块 - 关键修改：确保每个公式被适当包裹
+        // 7. 恢复 LaTeX 公式块 - 关键修改：确保每个公式被适当包裹
         text = text.replace(/\uE001LATEXBLOCK(\d+)\uE001/g, (_, i) => {
             const latex = latexBlocks[Number(i)];
             if (!latex) return '';
@@ -263,6 +273,8 @@
             // 对于 \[...\] 格式，保持原样
             return latex;
         });
+        // 8. 恢复提示块
+        text = text.replace(/\uE003ADMON(\d+)\uE003/g, (_, i) => admonitions[Number(i)] || '');
 
         return text;
     }
@@ -270,7 +282,7 @@
     function blockify(src) {
         const lines = src.split('\n');
         let out = '';
-        let inUl = false, inOl = false, inBlockquote = false, para = '';
+        let inUl = false, inOl = false, bqDepth = 0, para = '';
 
         const flushPara = () => {
             if (para.trim()) out += `<p>${inlineify(para.trim())}</p>`;
@@ -280,7 +292,12 @@
             if (inUl) { out += '</ul>'; inUl = false; }
             if (inOl) { out += '</ol>'; inOl = false; }
         };
-        const closeQuote = () => { if (inBlockquote) { out += '</blockquote>'; inBlockquote = false; } };
+        const closeQuote = () => {
+            while (bqDepth > 0) {
+                out += '</blockquote>';
+                bqDepth--;
+            }
+        };
 
         for (let i = 0; i < lines.length; i++) {
             const raw = lines[i];
@@ -309,12 +326,26 @@
                 continue;
             }
 
-            // Blockquote (single level)
-            const bq = /^>\s?(.*)$/.exec(line);
+            // Tables (GitHub style): header | header\n| --- |\nrows...
+            if (looksLikeTable(lines, i)) {
+                flushPara(); closeLists(); closeQuote();
+                const { tableHtml, nextIndex } = parseTable(lines, i);
+                out += tableHtml;
+                i = nextIndex;
+                continue;
+            }
+
+            // Blockquote (nested) - 支持原始 > 与转义 &gt;，允许中间空格
+            const bq = /^((?:(?:>|\&gt;)\s*)+)(.*)$/.exec(line);
             if (bq) {
                 flushPara(); closeLists();
-                if (!inBlockquote) { out += '<blockquote>'; inBlockquote = true; }
-                out += `<p>${inlineify(bq[1])}</p>`;
+                const markers = bq[1].match(/(?:>|&gt;)/g);
+                const level = markers ? markers.length : 0;
+                // open to target level
+                while (bqDepth < level) { out += '<blockquote>'; bqDepth++; }
+                // close if we stepped back
+                while (bqDepth > level) { out += '</blockquote>'; bqDepth--; }
+                out += `<p>${inlineify(bq[2].trim())}</p>`;
                 continue;
             }
 
@@ -346,13 +377,98 @@
         return out;
     }
 
+    function looksLikeTable(lines, idx) {
+        if (idx + 1 >= lines.length) return false;
+        const header = lines[idx].trim();
+        const sep = lines[idx + 1].trim();
+        if (!header.includes('|') || !sep.includes('|')) return false;
+        const sepParts = sep.replace(/^\|/, '').replace(/\|$/, '').split('|').map(s => s.trim());
+        if (!sepParts.length) return false;
+        // all separator cells should look like --- or :--- or ---:
+        const sepOk = sepParts.every(cell => /^:?-{2,}:?$/.test(cell));
+        return sepOk;
+    }
 
+    function parseTable(lines, start) {
+        const headerLine = lines[start].trim();
+        const alignLine = lines[start + 1].trim();
+        const bodyLines = [];
+        let i = start + 2;
+        while (i < lines.length && /\|/.test(lines[i])) {
+            bodyLines.push(lines[i].trim());
+            i++;
+        }
+        const headers = splitTableRow(headerLine);
+        const aligns = splitTableRow(alignLine).map(parseAlign);
+        const rows = bodyLines.map(splitTableRow);
+
+        const thead = `<thead><tr>${headers.map((h, idx) => `<th${alignAttr(aligns[idx])}>${inlineify(h)}</th>`).join('')}</tr></thead>`;
+        const tbody = `<tbody>${rows.map(r => `<tr>${r.map((c, idx) => `<td${alignAttr(aligns[idx])}>${inlineify(c)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+        return { tableHtml: `<table class="md-table">${thead}${tbody}</table>`, nextIndex: i - 1 };
+    }
+
+    function splitTableRow(line) {
+        const trimmed = line.replace(/^\|/, '').replace(/\|$/, '');
+        return trimmed.split('|').map(s => s.trim());
+    }
+    function parseAlign(cell) {
+        if (/^:-+:$/.test(cell)) return 'center';
+        if (/^:-+$/.test(cell)) return 'left';
+        if (/^-+:$/.test(cell)) return 'right';
+        return null;
+    }
+    function alignAttr(align) {
+        return align ? ` align="${align}"` : '';
+    }
+
+    // 将 > [!TYPE] ... 转换为提示块占位符
+    function transformAdmonitions(src) {
+        const lines = src.split('\n');
+        const out = [];
+        const stores = [];
+        const valid = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'];
+
+        for (let i = 0; i < lines.length; i++) {
+            const m = /^&gt;\s*\[!(\w+)\]\s*(.*)$/.exec(lines[i]);
+            if (!m) {
+                out.push(lines[i]);
+                continue;
+            }
+            const type = m[1].toUpperCase();
+            if (!valid.includes(type)) {
+                out.push(lines[i]);
+                continue;
+            }
+            const firstLine = m[2] || '';
+            const body = [];
+            if (firstLine) body.push(firstLine);
+            let j = i + 1;
+            while (j < lines.length) {
+                const n = /^&gt;\s?(.*)$/.exec(lines[j]);
+                if (!n) break;
+                body.push(n[1]);
+                j++;
+            }
+            i = j - 1;
+            const inner = blockify(body.join('\n'));
+            stores.push(
+                `<div class="admonition ${type.toLowerCase()}">` +
+                `<p class="admonition-title">${escapeHtmlAttr(type)}</p>` +
+                `<div class="admonition-content">${inner}</div>` +
+                `</div>`
+            );
+            out.push(`\uE003ADMON${stores.length - 1}\uE003`);
+        }
+
+        return { text: out.join('\n'), admonitions: stores };
+    }
 
     function inlineify(str) {
-        let s = str;
-        s = s.replace(/\$(.+?)\$/g, (m, math) => {
-            // 保留 LaTeX 内容不变
-            return `$${math}$`;
+        const mathSpans = [];
+        let s = str.replace(/\$(.+?)\$/g, (m, math) => {
+            const i = mathSpans.length;
+            mathSpans.push(math);
+            return `\uE002MATH${i}\uE002`;
         });
         // Images ![alt](src "title")
         s = s.replace(/!\[([^\]]*)\]\(([^\s\)]+)(?:\s+"([^"]+)")?\)/g, (m, alt, src, title) => {
@@ -378,6 +494,9 @@
         s = s.replace(/(\*|_)([^*_]+?)\1/g, '<em>$2</em>');
 
         s = s.replace(/`([^`]+?)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
+
+        // 恢复行内公式占位符
+        s = s.replace(/\uE002MATH(\d+)\uE002/g, (_, i) => `$${mathSpans[Number(i)]}$`);
 
         return s;
     }
@@ -437,7 +556,9 @@
         for (let i = 0; i < slides.length; i++) {
             // 只替换 currentSlide 内容，不破坏 stage 本体
             realStage.querySelector("#currentSlide").innerHTML = slides[i];
-            await new Promise(r => setTimeout(r, 100));
+            // 渲染公式与代码高亮后再截图
+            renderKaTeX();
+            await new Promise(r => setTimeout(r, 120));
 
             // 克隆整个 stage（包含其 class 与样式）
             const cloneStage = realStage.cloneNode(true);
