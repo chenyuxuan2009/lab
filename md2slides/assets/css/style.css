@@ -1,0 +1,490 @@
+:root {
+    --bg: #f5f6fa;
+    --text: #1e293b;
+    --muted: #64748b;
+    --surface: #ffffff;
+    --outline: #e2e8f0;
+    --accent: #0f62fe;
+    --accent-contrast: #ffffff;
+    --focus: 0 0 0 3px rgba(15, 98, 254, 0.35);
+    --slide-bg: #ffffff;
+    --slide-fg: #0f172a;
+    --slide-title: #111827;
+    --code-bg: #f6f8fb;
+    --code-fg: #0f172a;
+    --blockquote-bg: #f8fafc;
+    --blockquote-border: #e2e8f0;
+    --shadow: 0 8px 24px rgba(2, 6, 23, 0.08), 0 2px 6px rgba(2, 6, 23, 0.05);
+}
+
+[data-theme="dark"] {
+    --bg: #0b1220;
+    --text: #d1d5db;
+    --muted: #9ca3af;
+    --surface: #0f172a;
+    --outline: #1f2a44;
+    --accent: #60a5fa;
+    --accent-contrast: #0b1220;
+    --focus: 0 0 0 3px rgba(96, 165, 250, 0.35);
+    --slide-bg: #0b1220;
+    --slide-fg: #e5e7eb;
+    --slide-title: #93c5fd;
+    --code-bg: #111827;
+    --code-fg: #e5e7eb;
+    --blockquote-bg: #0f172a;
+    --blockquote-border: #334155;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+/* LaTeX 样式 */
+.katex {
+    font-size: 1.05em;
+}
+
+.katex-display {
+    margin: 1.2em 0;
+    overflow: auto hidden;
+    padding: 0.5em 0;
+}
+
+/* 暗色主题适配 */
+[data-theme="dark"] .katex {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .katex-display {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.8em;
+}
+
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.app {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--outline);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.logo {
+    width: 28px;
+    height: 28px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent) 0%, #8ab6ff 100%);
+    color: var(--accent-contrast);
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: var(--shadow);
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    padding: 8px 10px;
+    border-radius: 10px;
+}
+
+select.control-input,
+button.control-btn {
+    appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+button.control-btn.primary {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-color: transparent;
+}
+
+button.control-btn:hover,
+select.control-input:hover {
+    filter: brightness(0.98);
+}
+
+button.control-btn:focus,
+select.control-input:focus {
+    outline: none;
+    box-shadow: var(--focus);
+}
+
+.main {
+    display: grid;
+    grid-template-columns: minmax(320px, 0.45fr) 1fr;
+    gap: 16px;
+    padding: 16px;
+}
+
+.pane {
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: 14px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    box-shadow: var(--shadow);
+    min-height: 0;
+    /* allow children to size */
+}
+
+.pane-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--outline);
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.pane-body {
+    min-height: 0;
+    overflow: hidden;
+    /* necessary for children height calc */
+}
+
+textarea#markdownInput {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    background: transparent;
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.preview-pane .pane-body {
+    position: relative;
+    padding: 12px;
+}
+
+.preview-container {
+    position: relative;
+    height: calc(100% - 44px);
+    background: var(--surface);
+    border: 1px solid var(--outline);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.stage-wrapper {
+    position: absolute;
+    inset: 48px 16px 34px 16px;
+    /* leave room for header/progress */
+}
+
+.stage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1280px;
+    height: 720px;
+    /* 16:9 */
+    transform-origin: center center;
+}
+
+.slide {
+    width: 100%;
+    height: 100%;
+    background: var(--slide-bg);
+    color: var(--slide-fg);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    padding: 48px 56px;
+    box-sizing: border-box;
+}
+
+.slide h1,
+.slide h2,
+.slide h3,
+.slide h4,
+.slide h5 {
+    margin: 0 0 16px 0;
+    line-height: 1.1;
+    color: var(--slide-title);
+}
+
+.slide h1 {
+    font-size: 56px;
+    font-weight: 800;
+}
+
+.slide h2 {
+    font-size: 40px;
+    font-weight: 800;
+}
+
+.slide h3 {
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.slide p {
+    font-size: 22px;
+    line-height: 1.45;
+    margin: 8px 0 10px;
+}
+
+.slide ul,
+.slide ol {
+    font-size: 22px;
+    line-height: 1.45;
+    padding-left: 26px;
+    margin: 8px 0 10px;
+}
+
+.slide li {
+    margin: 6px 0;
+}
+
+.slide a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--accent);
+}
+
+.slide a:hover {
+    text-decoration: underline;
+}
+
+.slide img {
+    max-width: 100%;
+    max-height: 60vh;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+/* 在暗色主题样式中调整代码块样式 */
+[data-theme="dark"] .slide pre.code {
+    background: #1a1a1a;
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .slide code {
+    background: #1a1a1a;
+    color: #e2e8f0;
+}
+
+/* 调整代码块的最大宽度，防止溢出 */
+.slide pre.code {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: pre;
+    word-wrap: normal;
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 18px;
+    line-height: 1.4;
+    border: 1px solid var(--outline);
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow: visible;
+    max-height: none;
+}
+
+.slide pre.code code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+}
+
+/* .slide pre.code {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 14px 16px;
+  border-radius: 12px;
+  overflow: auto;
+  font-size: 18px;
+  line-height: 1.4;
+  border: 1px solid var(--outline);
+}
+
+.slide code {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--outline);
+} */
+
+
+.slide blockquote {
+    background: var(--blockquote-bg);
+    border-left: 4px solid var(--blockquote-border);
+    padding: 10px 14px;
+    border-radius: 10px;
+}
+
+.slide .subtitle {
+    color: var(--muted);
+    font-size: 26px;
+    margin-top: -6px;
+}
+
+.preview-header {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--surface), transparent 20%);
+    border: 1px solid var(--outline);
+    color: var(--muted);
+    font-size: 12px;
+    pointer-events: auto;
+}
+
+.nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--outline);
+    background: color-mix(in oklab, var(--surface), transparent 10%);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+}
+
+.nav-btn:hover {
+    filter: brightness(0.98);
+}
+
+.nav-btn:focus {
+    outline: none;
+    box-shadow: var(--focus);
+}
+
+.nav-prev {
+    left: 24px;
+}
+
+.nav-next {
+    right: 24px;
+}
+
+.progressbar {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 10px;
+    height: 6px;
+    background: var(--outline);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progressbar>.fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 160ms ease-out;
+}
+
+.help-hint {
+    padding: 6px 10px 0 10px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: right;
+}
+
+@media (max-width: 1100px) {
+    .main {
+        grid-template-columns: 1fr;
+    }
+
+    .preview-container {
+        height: 65vh;
+    }
+}
+
+/* 在现有的 CSS 中添加 */
+.katex-display-wrapper {
+    margin: 1.2em 0;
+    overflow: auto hidden;
+    padding: 0.5em 0;
+    text-align: center;
+}
+
+[data-theme="dark"] .katex-display-wrapper {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.8em;
+}
