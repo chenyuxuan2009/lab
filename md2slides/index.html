@@ -503,6 +503,20 @@ SOFTWARE. -->
         height: 65vh;
       }
     }
+
+    /* 在现有的 CSS 中添加 */
+    .katex-display-wrapper {
+      margin: 1.2em 0;
+      overflow: auto hidden;
+      padding: 0.5em 0;
+      text-align: center;
+    }
+
+    [data-theme="dark"] .katex-display-wrapper {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 0.8em;
+    }
   </style>
   <!-- 在现有的 <style> 标签之后添加 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
@@ -803,24 +817,58 @@ SOFTWARE. -->
         if (!md.trim()) return '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:18px;">(Empty slide)</div>';
 
         let text = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        // Extract fenced code blocks
+
+        // 1. 先提取 LaTeX 公式块（$$...$$ 和 \[...\]）
+        const latexBlocks = [];
+        text = text.replace(/\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$/g, (match) => {
+          const i = latexBlocks.length;
+          latexBlocks.push(match);
+          return `\uE001LATEXBLOCK${i}\uE001`;
+        });
+
+        // 2. 提取 fenced code blocks
         const codeBlocks = [];
         text = text.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (m, lang, code) => {
           const i = codeBlocks.length;
-          // 添加语言类名以便高亮
           const langClass = lang ? ` class="language-${escapeHtmlAttr(lang)}"` : '';
           codeBlocks.push(`<pre class="code"><code${langClass}>${escapeHtml(code)}</code></pre>`);
           return `\uE000CODEBLOCK${i}\uE000`;
         });
 
-        // Block-level transforms: headings, lists, quotes, paragraphs
+        // 3. 块级转换
         text = blockify(text);
 
-        // Inline transforms
+        // 4. 内联转换
         text = inlineify(text);
 
-        // Restore code blocks
+        // 5. 恢复代码块
         text = text.replace(/\uE000CODEBLOCK(\d+)\uE000/g, (_, i) => codeBlocks[Number(i)] || '');
+
+        // 6. 恢复 LaTeX 公式块 - 关键修改：确保每个公式被适当包裹
+        text = text.replace(/\uE001LATEXBLOCK(\d+)\uE001/g, (_, i) => {
+          const latex = latexBlocks[Number(i)];
+          if (!latex) return '';
+
+          // 对于 $$...$$ 格式的公式，确保它们被包裹在适当的元素中
+          if (latex.startsWith('$$') && latex.endsWith('$$')) {
+            const content = latex.slice(2, -2).trim();
+            // 将连续的 $$ 公式分割成独立的公式
+            const formulas = content.split(/\$\$/).filter(f => f.trim());
+
+            if (formulas.length > 1) {
+              // 多个公式，每个单独渲染
+              return formulas.map(formula =>
+                `<div class="katex-display-wrapper">$$${formula}$$</div>`
+              ).join('\n');
+            } else {
+              // 单个公式
+              return `<div class="katex-display-wrapper">${latex}</div>`;
+            }
+          }
+
+          // 对于 \[...\] 格式，保持原样
+          return latex;
+        });
 
         return text;
       }
@@ -843,6 +891,14 @@ SOFTWARE. -->
         for (let i = 0; i < lines.length; i++) {
           const raw = lines[i];
           const line = raw; // already escaped
+          // 跳过 LaTeX 公式块占位符的处理
+          if (line.includes('\uE001LATEXBLOCK')) {
+            if (para) flushPara();
+            closeLists();
+            closeQuote();
+            out += line + '\n';
+            continue;
+          }
           if (!line.trim()) { // blank line
             flushPara();
             closeLists();

@@ -1,1 +1,248 @@
-test
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <link rel="icon" href="/favicon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYX Lab Tools</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Inter", "Segoe UI", sans-serif;
+        }
+
+        body {
+            background: #05060a;
+            overflow-x: hidden;
+            color: #e5e7eb;
+        }
+
+        /* 粒子背景不影响内容 */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+
+        /* 顶部标题区域 100% 居中 */
+        header {
+            width: 100%;
+            text-align: center;
+            padding: 80px 0 40px;
+        }
+
+        h1 {
+            font-size: 60px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #00f6ff, #7b2ff7, #ff00e6);
+            -webkit-background-clip: text;
+            color: transparent;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0% {
+                filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 20px rgba(255, 0, 255, 0.7));
+            }
+
+            100% {
+                filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+            }
+        }
+
+        .subtitle {
+            margin-top: 10px;
+            font-size: 18px;
+            opacity: 0.7;
+            text-align: center;
+        }
+
+        /* 这里保证整个内容块严格居中 */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            /* !!! 核心：全局居中 */
+            padding: 0 20px;
+        }
+
+        .grid {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 30px;
+            justify-items: center;
+            /* 让每个卡片居中 */
+            justify-content: center;
+            /* 让整组卡片居中 */
+        }
+
+        .card {
+            width: 260px;
+            /* 卡片等宽，使网格稳定居中 */
+            padding: 25px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            transition: 0.25s ease;
+            text-decoration: none;
+            color: white;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(0, 255, 255, 0.6);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+        }
+
+        .card-title {
+            font-size: 22px;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #00eaff;
+            text-align: center;
+            display: flex;
+            /* 水平布局 */
+            justify-content: center;
+            /* 强制水平居中 */
+            align-items: center;
+            text-align: center;
+            /* 多行时仍然居中 */
+
+            width: 100%;
+            line-height: 1.3;
+
+            /* 不加 break-all，不会炸单词 */
+            word-break: normal;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            opacity: 0.8;
+            text-align: center;
+            /* 水平布局 */
+            justify-content: center;
+            /* 强制水平居中 */
+            align-items: center;
+            text-align: center;
+            /* 多行时仍然居中 */
+
+            width: 100%;
+            line-height: 1.3;
+
+            /* 不加 break-all，不会炸单词 */
+            word-break: normal;
+        }
+
+        footer {
+            margin-top: 80px;
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <header>
+        <h1>LAB TOOLS</h1>
+        <div class="subtitle">神秘小工具合集</div>
+    </header>
+
+    <div class="container">
+        <div class="grid">
+
+            <a class="card" href="http://yin-xin.fun/">
+                <div class="card-title">吟心</div>
+                <div class="card-desc">一个古诗文趣味答题网站</div>
+            </a>
+
+            <a class="card" href="https://github.com/chenyuxuan2009/luogu_submission_better">
+                <div class="card-title">Luogu Submission Better</div>
+                <div class="card-desc">洛谷提交记录优化插件</div>
+            </a>
+
+            <a class="card" href="https://github.com/chenyuxuan2009/OrthogonalLatinSquare">
+                <div class="card-title">Orthogonal Latin Square</div>
+                <div class="card-desc">正交拉丁方的构造</div>
+            </a>
+
+            <a class="card" href="https://github.com/chenyuxuan2009/QOJ-better">
+                <div class="card-title">QOJ Better</div>
+                <div class="card-desc">QOJ 优化体验插件</div>
+            </a>
+
+            <a class="card" href="/md2slides">
+                <div class="card-title">Markdown to Slides</div>
+                <div class="card-desc">一个方便的 Markdown 转讲课课件工具</div>
+            </a>
+
+        </div>
+    </div>
+
+    <footer>
+        © 2025 CYX Lab Tools
+    </footer>
+
+    <!-- 粒子动画 -->
+    <script>
+        const canvas = document.getElementById("bg-canvas");
+        const ctx = canvas.getContext("2d");
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.onresize = resize;
+
+        let particles = [];
+        for (let i = 0; i < 80; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 0.7,
+                vy: (Math.random() - 0.5) * 0.7,
+                r: 1 + Math.random() * 2
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#00ffe6";
+
+            for (let p of particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+
+</body>
+
+</html>
