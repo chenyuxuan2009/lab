@@ -1,3 +1,5 @@
+<!-- https://github.com/openai/gpt-5-coding-examples/tree/main/apps/markdown-to-slides -->
+
 <!-- 
 Copyright 2025 OpenAI
 
@@ -80,7 +82,12 @@ SOFTWARE.
       <section class="pane preview-pane" aria-label="Live preview">
         <div class="pane-header">
           <div>Live Preview</div>
-          <div id="slideIndicator" style="color: var(--muted); font-size: 12px;">Slide 1 of 1</div>
+          <div id="slideIndicator" style="color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 4px;">
+            <span>Slide</span>
+            <input type="number" id="slideInput" min="1" value="1" style="width: 50px; padding: 2px 4px; border: 1px solid var(--outline); border-radius: 4px; background: var(--surface); color: var(--text); font-size: 12px; text-align: center;">
+            <span>of</span>
+            <span id="slideTotal">1</span>
+          </div>
         </div>
         <div class="pane-body">
           <div id="preview" class="preview-container" tabindex="0" aria-label="Presentation preview">

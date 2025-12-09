@@ -188,6 +188,35 @@ select.control-input:focus {
     font-weight: 600;
 }
 
+/* 幻灯片指示器输入框样式 */
+#slideIndicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#slideInput {
+    width: 50px;
+    padding: 2px 4px;
+    border: 1px solid var(--outline);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 12px;
+    text-align: center;
+    font-family: inherit;
+}
+
+#slideInput:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--focus);
+}
+
+#slideInput:hover {
+    border-color: var(--accent);
+}
+
 .pane-body {
     min-height: 0;
     overflow: hidden;
@@ -257,7 +286,8 @@ textarea#markdownInput {
 .slide h2,
 .slide h3,
 .slide h4,
-.slide h5 {
+.slide h5,
+.slide h6 {
     margin: 0 0 16px 0;
     line-height: 1.1;
     color: var(--slide-title);
@@ -278,6 +308,21 @@ textarea#markdownInput {
     font-weight: 700;
 }
 
+.slide h4 {
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.slide h5 {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.slide h6 {
+    font-size: 20px;
+    font-weight: 700;
+}
+
 .slide p {
     font-size: 22px;
     line-height: 1.45;
@@ -294,6 +339,45 @@ textarea#markdownInput {
 
 .slide li {
     margin: 6px 0;
+}
+
+/* 任务列表样式 */
+.slide ul.task-list {
+    list-style: none;
+    padding-left: 26px;
+}
+
+.slide li.task-item {
+    display: flex;
+    align-items: center;
+    /* 垂直居中对齐 */
+    gap: 12px;
+    /* 使用 gap 属性设置 checkbox 和文字之间的间距 */
+    margin: 6px 0;
+    margin-left: -26px;
+    /* 负边距，使整个任务项向左移动 */
+    padding-left: 0;
+}
+
+.slide li.task-item input[type="checkbox"] {
+    margin: 0;
+    margin-left: -2px;
+    /* checkbox 稍微靠左，为间距留出空间 */
+    width: 18px;
+    height: 18px;
+    cursor: default;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+}
+
+.slide li.task-item span {
+    flex: 1;
+    padding-left: 0;
+    /* 确保文本从正确的位置开始 */
+}
+
+.slide li.task-item span {
+    flex: 1;
 }
 
 .slide a {
@@ -319,9 +403,11 @@ textarea#markdownInput {
     color: #e2e8f0;
 }
 
-[data-theme="dark"] .slide code {
+/* 暗色主题的行内代码样式 */
+[data-theme="dark"] .slide code:not(pre code) {
     background: #1a1a1a;
     color: #e2e8f0;
+    border-color: #334155;
 }
 
 /* 调整代码块的最大宽度，防止溢出 */
@@ -351,24 +437,16 @@ textarea#markdownInput {
     font-size: inherit;
 }
 
-/* .slide pre.code {
-  background: var(--code-bg);
-  color: var(--code-fg);
-  padding: 14px 16px;
-  border-radius: 12px;
-  overflow: auto;
-  font-size: 18px;
-  line-height: 1.4;
-  border: 1px solid var(--outline);
+/* 行内代码样式 - 只应用于不在 pre 内的 code 标签 */
+.slide code:not(pre code) {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--outline);
+    font-size: 0.9em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
-
-.slide code {
-  background: var(--code-bg);
-  color: var(--code-fg);
-  padding: 2px 6px;
-  border-radius: 6px;
-  border: 1px solid var(--outline);
-} */
 
 
 .slide blockquote {
@@ -600,6 +678,13 @@ textarea#markdownInput {
     background: var(--outline);
     border-radius: 999px;
     overflow: hidden;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.progressbar:hover {
+    background: color-mix(in srgb, var(--outline) 80%, var(--accent) 20%);
+    height: 8px;
 }
 
 .progressbar>.fill {
@@ -632,6 +717,25 @@ textarea#markdownInput {
     overflow: auto hidden;
     padding: 0.5em 0;
     text-align: center;
+    /* 设置与段落相同的字体大小基准，确保块级公式与行内公式大小一致 */
+    font-size: 22px;
+}
+
+/* 确保块级公式内的所有 KaTeX 元素都使用正确的字体大小 */
+/* 使用像素值确保与行内公式大小一致（22px * 1.05 = 23.1px） */
+/* 覆盖 KaTeX CSS 中可能存在的 1.2em 等默认设置 */
+/* .katex-display-wrapper .katex,
+.katex-display-wrapper .katex-display,
+.katex-display-wrapper .katex-display .katex,
+.katex-display-wrapper .katex * {
+    font-size: 23.1px !important;
+} */
+
+/* 确保所有 KaTeX 子元素也使用正确的字体大小 */
+.katex-display-wrapper .katex .katex-mathml,
+.katex-display-wrapper .katex .katex-html,
+.katex-display-wrapper .katex .katex-html * {
+    font-size: inherit !important;
 }
 
 [data-theme="dark"] .katex-display-wrapper {

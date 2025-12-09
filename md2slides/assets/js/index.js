@@ -10,7 +10,10 @@
         stage: $('#stage'),
         currentSlide: $('#currentSlide'),
         indicator: $('#slideIndicator'),
+        slideInput: $('#slideInput'),
+        slideTotal: $('#slideTotal'),
         progressFill: $('#progressFill'),
+        progressbar: $('.progressbar'),
         deckTitle: $('#deckTitle'),
         prev: $('#prevBtn'),
         next: $('#nextBtn'),
@@ -18,7 +21,183 @@
         stageWrapper: document.querySelector('.stage-wrapper'),
     };
 
-    const SAMPLE = `# Markdown → Slides\nA clean, business-ready deck from plain text.\n\nPresenter: Jane Doe\nCompany: Example Corp\n\n---\n\n## Agenda\n- Why Markdown slides\n- How it works\n- Live demo\n- Tips\n- Q&A\n\n---\n\n## Why Markdown?\n- Focus on content, not formatting\n- Version control friendly\n- Quickly iterate and collaborate\n- Portable: works anywhere with a browser\n\n---\n\n## Formatting essentials\n- Emphasis with **bold** and *italic*\n- Links like [OpenAI](https://openai.com) and images below\n- Inline code: \`npm start\`\n- Code blocks:\n\n\`\`\`js\nfunction hello(name) {\n  console.log('Hello, ' + name + '!');\n}\nhello('world');\n\`\`\`\n\n---\n\n## Visuals\n![Chart](https://dummyimage.com/960x320/4b9cd3/ffffff&text=Business+Chart)\n\n- Add images to support your narrative\n- Keep slides focused and uncluttered\n\n---\n\n## Tips for great slides\n1. One idea per slide\n2. Use readable font sizes\n3. Contrast matters\n4. Keep code snippets small\n\n> Pro tip: Press F for fullscreen, use ← → to navigate.\n\n---\n\n# Thank you\n\nQuestions?\n`;
+    const SAMPLE = `# Markdown → Slides
+
+灵感来源于：<https://github.com/openai/gpt-5-coding-examples/tree/main/apps/markdown-to-slides>
+    
+后由 [cyx](https://cyx2009.top/) 进行部分优化。
+
+---
+
+# Introduction
+
+支持了绝大多数的 Markdown 语法。
+
+---
+
+例如这是一个标题的例子：
+
+# h1
+## h2
+### h3
+#### h4
+##### h5
+###### h6
+
+---
+
+这是粗体：**test**
+
+这是删除线：~~test~~
+
+这是斜体：_test_
+
+这是混搭：**~~_test_~~**
+
+---
+
+这是公式：$a^2+b^2=c^2$
+
+这也是公式：
+
+$$
+\\begin{aligned}
+1+1
+&=2\\\\
+&=3-1
+\\end{aligned}
+$$
+
+---
+
+这是链接：[cyx2009 Home](https://cyx2009.top/)
+
+这也是链接：<https://cyx2009.top/>
+
+这是图片：![](https://cyx2009.top/assets/img/logo.png)
+
+---
+
+这是图片套链接：
+
+[![](https://cyx2009.top/assets/img/logo.png)](https://cyx2009.top/)
+
+这是文字效果套链接 [**~~_点我_~~**](https://cyx2009.top/)
+
+---
+
+- 这是
+- 无序
+- 列表
+
+1. 这是
+1. 有序
+1. 列表
+
+---
+
+这是 mermaid：
+
+\`\`\`mermaid
+stateDiagram
+    S=1 --> 2
+    S=1 --> 3
+    S=1 --> 4
+    2 --> 5
+    2 --> 6
+    2 --> 7
+    3 --> 5
+    3 --> 6
+    3 --> 7
+    4 --> 5
+    4 --> 6
+    4 --> 7
+    5 --> T=8
+    6 --> T=8
+    7 --> T=8
+\`\`\`
+
+---
+
+> [!NOTE]
+>
+> 这是提醒
+
+> [!TIP]
+>
+> 这是建议
+
+> [!IMPORTANT]
+>
+> 这是重要
+
+---
+
+> [!WARNING]
+>
+> 这是警告
+
+> [!CAUTION]
+>
+> 这是注意
+
+---
+
+这是行内代码块：\`print(int(input()) + int(input()))\`
+
+这是行间代码块：
+
+\`\`\`cpp
+#include <bits/stdc++.h>
+using namespace std;
+int main()
+{
+    int a, b;
+    cin >> a >> b;
+    cout << a + b << endl;
+}
+\`\`\`
+
+\`\`\`python
+a = int(input())
+b = int(input())
+print(a + b)
+\`\`\`
+
+---
+
+> 这是引用
+>
+> 这是第二行引用
+
+> 这是一级引用
+>
+> > 这是二级引用
+
+---
+
+| 这是表格         | 这是表格的第二列       |
+| ---------------- | ---------------------- |
+| 这是表格的第二行 | 这是表格的第二行第二列 |
+
+- [ ] 这是任务列表
+- [x] 这是已完成任务
+
+---
+
+最后关于导出 PDF，这段代码有点招笑了。
+
+原理是，截图保存，然后拼成 PDF。
+
+你问链接没法截图？我拼成 PDF 之后在对应位置加一个链接属性。
+
+求求了，给 repo 点个 star 吧。
+
+<https://github.com/chenyuxuan2009/lab>
+
+`;
+
+    // const SAMPLE = `# Markdown → Slides\nA clean, business-ready deck from plain text.\n\nPresenter: Jane Doe\nCompany: Example Corp\n\n---\n\n## Agenda\n- Why Markdown slides\n- How it works\n- Live demo\n- Tips\n- Q&A\n\n---\n\n## Why Markdown?\n- Focus on content, not formatting\n- Version control friendly\n- Quickly iterate and collaborate\n- Portable: works anywhere with a browser\n\n---\n\n## Formatting essentials\n- Emphasis with **bold** and *italic*\n- Links like [OpenAI](https://openai.com) and images below\n- Inline code: \`npm start\`\n- Code blocks:\n\n\`\`\`js\nfunction hello(name) {\n  console.log('Hello, ' + name + '!');\n}\nhello('world');\n\`\`\`\n\n---\n\n## Visuals\n![Chart](https://dummyimage.com/960x320/4b9cd3/ffffff&text=Business+Chart)\n\n- Add images to support your narrative\n- Keep slides focused and uncluttered\n\n---\n\n## Tips for great slides\n1. One idea per slide\n2. Use readable font sizes\n3. Contrast matters\n4. Keep code snippets small\n\n> Pro tip: Press F for fullscreen, use ← → to navigate.\n\n---\n\n# Thank you\n\nQuestions?\n`;
 
     //       const SAMPLE = `# 代码块宽度测试
 
@@ -43,6 +222,7 @@
     // State
     let slides = [];
     let index = 0;
+    let slideLineRanges = []; // 存储每个基础幻灯片在文本中的行范围 [{start: 0, end: 10, slideIndex: 0}, ...]
 
     // Setup theme from preference/localStorage
     const savedTheme = localStorage.getItem('m2s-theme');
@@ -70,6 +250,41 @@
     dom.prev.addEventListener('click', prevSlide);
     dom.next.addEventListener('click', nextSlide);
 
+    // 输入框跳转功能
+    if (dom.slideInput) {
+        dom.slideInput.addEventListener('change', (e) => {
+            if (!slides || slides.length === 0) {
+                e.target.value = 0;
+                return;
+            }
+            const targetSlide = parseInt(e.target.value);
+            if (!isNaN(targetSlide) && targetSlide >= 1 && targetSlide <= slides.length) {
+                gotoSlide(targetSlide - 1);
+            } else {
+                // 如果输入无效，恢复当前值
+                e.target.value = index + 1;
+            }
+        });
+
+        dom.slideInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.target.blur(); // 触发 change 事件
+            }
+        });
+    }
+
+    // 进度条点击跳转功能
+    if (dom.progressbar) {
+        dom.progressbar.addEventListener('click', (e) => {
+            if (!slides || slides.length === 0) return;
+            const rect = dom.progressbar.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            const targetSlide = Math.max(1, Math.min(slides.length, Math.ceil(percentage * slides.length)));
+            gotoSlide(targetSlide - 1);
+        });
+    }
+
     // 仅在舞台区域悬停时显示左右按钮
     if (dom.stageWrapper) {
         dom.stageWrapper.addEventListener('mouseenter', () => dom.preview.classList.add('nav-visible'));
@@ -89,6 +304,68 @@
     dom.markdown.addEventListener('input', () => {
         window.clearTimeout(timer);
         timer = window.setTimeout(() => compileAndRender(), 180);
+    });
+
+    // 根据鼠标位置跳转到对应幻灯片
+    function getSlideIndexFromMousePosition(e) {
+        if (!dom.markdown || slideLineRanges.length === 0) return -1;
+
+        const textarea = dom.markdown;
+        const rect = textarea.getBoundingClientRect();
+        const mouseY = e.clientY - rect.top;
+
+        // 计算鼠标所在的行号
+        // 使用 textarea 的实际行高和 padding
+        const styles = window.getComputedStyle(textarea);
+        const lineHeight = parseFloat(styles.lineHeight) || 20;
+        const paddingTop = parseFloat(styles.paddingTop) || 0;
+        const borderTop = parseFloat(styles.borderTopWidth) || 0;
+        const scrollTop = textarea.scrollTop;
+
+        // 计算鼠标所在的行号（从 0 开始）
+        // mouseY 是相对于 textarea 顶部的位置，加上 scrollTop 得到在文本中的位置
+        const textY = mouseY + scrollTop - paddingTop - borderTop;
+        const lineNumber = Math.max(0, Math.floor(textY / lineHeight));
+
+        // 找到对应的幻灯片
+        for (let i = 0; i < slideLineRanges.length; i++) {
+            const range = slideLineRanges[i];
+            if (lineNumber >= range.start && lineNumber <= range.end) {
+                // 返回该基础幻灯片的最后一页渐进式幻灯片索引（显示最完整）
+                if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
+                    return range.progressiveStartIndex + range.progressiveCount - 1;
+                }
+                return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
+            }
+        }
+
+        // 如果鼠标在第一个幻灯片之前，返回第一个幻灯片的最后一页
+        if (lineNumber < slideLineRanges[0].start && slideLineRanges.length > 0) {
+            const firstRange = slideLineRanges[0];
+            if (firstRange.progressiveStartIndex !== undefined && firstRange.progressiveCount !== undefined) {
+                return firstRange.progressiveStartIndex + firstRange.progressiveCount - 1;
+            }
+            return firstRange.progressiveStartIndex !== undefined ? firstRange.progressiveStartIndex : 0;
+        }
+
+        // 如果鼠标在最后一个幻灯片之后，返回最后一个幻灯片的最后一页
+        if (slideLineRanges.length > 0) {
+            const lastRange = slideLineRanges[slideLineRanges.length - 1];
+            if (lastRange.progressiveStartIndex !== undefined && lastRange.progressiveCount !== undefined) {
+                return lastRange.progressiveStartIndex + lastRange.progressiveCount - 1;
+            }
+            return lastRange.progressiveStartIndex !== undefined ? lastRange.progressiveStartIndex : 0;
+        }
+
+        return -1;
+    }
+
+    // 监听 textarea 的点击事件（聚焦时跳转）
+    dom.markdown.addEventListener('click', (e) => {
+        const targetSlideIndex = getSlideIndexFromMousePosition(e);
+        if (targetSlideIndex >= 0 && targetSlideIndex !== index) {
+            gotoSlide(targetSlideIndex);
+        }
     });
 
     // 在 setTheme 函数中添加代码高亮主题切换
@@ -140,18 +417,23 @@
         if (!slides.length) return;
         index = Math.max(0, Math.min(slides.length - 1, i));
         dom.currentSlide.innerHTML = slides[index] || '';
-        // renderKaTeX();
-
-        // 延迟一点渲染 LaTeX 和代码高亮
-        setTimeout(() => {
-            renderKaTeX();
-        }, 5);
-
+        renderKaTeX();
         updateHud();
     }
 
     function updateHud() {
-        dom.indicator.textContent = `Slide ${slides.length ? index + 1 : 0} of ${slides.length}`;
+        const currentSlide = slides.length ? index + 1 : 0;
+        const totalSlides = slides.length;
+
+        // 更新输入框和总数
+        if (dom.slideInput) {
+            dom.slideInput.value = currentSlide;
+            dom.slideInput.max = totalSlides;
+        }
+        if (dom.slideTotal) {
+            dom.slideTotal.textContent = totalSlides;
+        }
+
         const pct = slides.length ? ((index + 1) / slides.length) * 100 : 0;
         dom.progressFill.style.width = pct.toFixed(2) + '%';
         // Update deck title from first H1, if present
@@ -161,10 +443,413 @@
         dom.deckTitle.textContent = h1 ? h1.textContent : 'Presentation';
     }
 
+    // 生成渐进式幻灯片（类似 PPT 动画效果）
+    function generateProgressiveSlides(html) {
+        console.log('\n========== 开始生成渐进式幻灯片 ==========');
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+
+        // 查找所有可渐进显示的元素，按照它们在 DOM 中的顺序处理
+        const progressiveElements = [];
+        let elementIndex = 0;
+
+        // 使用 TreeWalker 按照 DOM 顺序遍历
+        const walker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: function (node) {
+                    // 跳过代码块、mermaid 和 LaTeX 公式块
+                    if (node.tagName === 'PRE' && node.classList.contains('code')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (node.classList.contains('mermaid')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    // 跳过 LaTeX 公式块（katex-display-wrapper）
+                    if (node.classList.contains('katex-display-wrapper')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    // 跳过 admonition 块内部的元素（admonition 块本身会被处理，但内部元素不应该被单独处理）
+                    const parentAdmonition = node.closest('.admonition');
+                    if (parentAdmonition && node !== parentAdmonition) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    // 跳过代码块内部的元素（code 标签）
+                    if (node.closest('pre.code')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }
+        );
+
+        let node;
+        while (node = walker.nextNode()) {
+            let shouldProcess = false;
+
+            // 标题（h1-h6）
+            if (/^H[1-6]$/.test(node.tagName)) {
+                if (!node.closest('blockquote') && !node.closest('.admonition')) {
+                    shouldProcess = true;
+                }
+            }
+            // 段落
+            else if (node.tagName === 'P') {
+                if (!node.closest('li') && !node.closest('blockquote') && !node.closest('.admonition')) {
+                    shouldProcess = true;
+                    // 检查段落后面是否紧跟着 LaTeX 公式块
+                    let nextSibling = node.nextElementSibling;
+                    if (nextSibling && nextSibling.classList.contains('katex-display-wrapper')) {
+                        // 将 LaTeX 公式块和段落使用相同的索引，这样它们会一起显示
+                        nextSibling.setAttribute('data-progressive-index', elementIndex);
+                    }
+                }
+            }
+            // 列表项（只处理顶级列表的直接子项）
+            else if (node.tagName === 'LI') {
+                const list = node.parentElement;
+                if ((list.tagName === 'UL' || list.tagName === 'OL') && !list.closest('li')) {
+                    shouldProcess = true;
+                }
+            }
+            // 表格行（tr）
+            else if (node.tagName === 'TR' && node.closest('tbody')) {
+                shouldProcess = true;
+            }
+            // blockquote
+            else if (node.tagName === 'BLOCKQUOTE') {
+                shouldProcess = true;
+            }
+            // admonition 块
+            else if (node.classList.contains('admonition')) {
+                shouldProcess = true;
+            }
+
+            if (shouldProcess) {
+                // 检查元素是否有实际内容，跳过空内容
+                let hasContent = false;
+                if (node.tagName === 'P') {
+                    // 段落：检查文本内容是否为空
+                    hasContent = node.textContent.trim().length > 0;
+                } else if (node.tagName === 'LI') {
+                    // 列表项：检查文本内容是否为空
+                    hasContent = node.textContent.trim().length > 0;
+                } else if (node.tagName === 'TR') {
+                    // 表格行：检查是否有单元格内容
+                    hasContent = Array.from(node.querySelectorAll('td')).some(td => td.textContent.trim().length > 0);
+                } else {
+                    // 其他元素（标题、blockquote、admonition）：检查文本内容
+                    hasContent = node.textContent.trim().length > 0;
+                }
+
+                if (hasContent) {
+                    node.setAttribute('data-progressive-index', elementIndex++);
+                    progressiveElements.push(node);
+                }
+            }
+        }
+
+        console.log(`找到 ${progressiveElements.length} 个渐进式元素（不包括代码块）`);
+
+        // 后处理：确保 admonition 块内部的元素不会被单独处理
+        // 移除所有在 admonition 块内部的元素的 data-progressive-index 属性
+        tempDiv.querySelectorAll('.admonition [data-progressive-index]').forEach(el => {
+            if (!el.classList.contains('admonition')) {
+                el.removeAttribute('data-progressive-index');
+            }
+        });
+
+        // 后处理：确保代码块和 mermaid 块作为独立的渐进式元素
+        // 按照 DOM 顺序处理代码块，确保每个代码块都有唯一的、递增的索引
+        // 使用 TreeWalker 确保按照 DOM 顺序获取代码块
+        const codeBlocks = [];
+        const codeBlockWalker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: function (codeEl) {
+                    if ((codeEl.tagName === 'PRE' && codeEl.classList.contains('code')) ||
+                        codeEl.classList.contains('mermaid')) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                }
+            }
+        );
+        let codeBlockNode;
+        while (codeBlockNode = codeBlockWalker.nextNode()) {
+            codeBlocks.push(codeBlockNode);
+        }
+
+        if (codeBlocks.length > 0) {
+            console.log(`\n找到 ${codeBlocks.length} 个代码块/Mermaid 块，按 DOM 顺序处理...`);
+            codeBlocks.forEach((el, idx) => {
+                const preview = el.textContent.substring(0, 30).replace(/\n/g, ' ');
+                console.log(`  代码块 ${idx + 1} (DOM 顺序): "${preview}..."`);
+            });
+
+            // 收集所有已分配索引的元素（开始时只包括渐进式元素），按 DOM 顺序排序
+            const allIndexedElements = progressiveElements.map(el => ({
+                element: el,
+                index: parseInt(el.getAttribute('data-progressive-index'))
+            })).sort((a, b) => {
+                const pos = a.element.compareDocumentPosition(b.element);
+                if (pos & Node.DOCUMENT_POSITION_PRECEDING) return -1;
+                if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return 1;
+                return 0;
+            });
+
+            // 为每个代码块分配索引（按 DOM 顺序）
+            codeBlocks.forEach((codeEl, codeIdx) => {
+                // 找到代码块前面最后一个已分配索引的元素
+                let maxIndex = -1;
+                let precedingElement = null;
+
+                // 遍历所有已分配索引的元素，找到在代码块前面的最后一个
+                allIndexedElements.forEach(item => {
+                    const pos = item.element.compareDocumentPosition(codeEl);
+                    if (pos & Node.DOCUMENT_POSITION_PRECEDING) {
+                        if (item.index > maxIndex) {
+                            maxIndex = item.index;
+                            precedingElement = item.element;
+                        }
+                    }
+                });
+
+                // 代码块的索引 = 前面最后一个元素的索引 + 1
+                // 如果前面没有元素，使用当前最大索引 + 1（确保每个代码块都有唯一索引）
+                const codeIndex = maxIndex >= 0 ? maxIndex + 1 : (allIndexedElements.length > 0
+                    ? Math.max(...allIndexedElements.map(item => item.index)) + 1
+                    : 0);
+
+                codeEl.setAttribute('data-progressive-index', codeIndex.toString());
+
+                // 调试输出
+                const codeType = codeEl.tagName === 'PRE' ? '代码块' : 'Mermaid 图表';
+                const codePreview = codeEl.textContent.substring(0, 30).replace(/\n/g, ' ');
+                const precedingInfo = precedingElement
+                    ? `${precedingElement.tagName} (索引 ${maxIndex})`
+                    : '无（前面没有元素）';
+                console.log(`  代码块 ${codeIdx + 1}: ${codeType}, 索引=${codeIndex}, 前面元素=${precedingInfo}, 预览="${codePreview}..."`);
+
+                // 将代码块添加到已分配索引的元素列表中（按 DOM 顺序插入）
+                // 这样后续的代码块可以正确找到前面的代码块
+                let insertIndex = -1;
+                for (let i = 0; i < allIndexedElements.length; i++) {
+                    const item = allIndexedElements[i];
+                    const pos = item.element.compareDocumentPosition(codeEl);
+                    if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
+                        insertIndex = i;
+                        break;
+                    }
+                }
+                if (insertIndex >= 0) {
+                    allIndexedElements.splice(insertIndex, 0, { element: codeEl, index: codeIndex });
+                } else {
+                    allIndexedElements.push({ element: codeEl, index: codeIndex });
+                }
+            });
+        }
+
+        // 检查是否有代码块或 mermaid 块
+        const hasCodeBlocks = tempDiv.querySelectorAll('pre.code, .mermaid').length > 0;
+
+        // 获取所有带索引的元素（包括渐进式元素和代码块）
+        const allIndexedElementsList = Array.from(tempDiv.querySelectorAll('[data-progressive-index]'));
+
+        // 如果没有可渐进显示的元素（包括代码块），返回原始幻灯片
+        if (allIndexedElementsList.length === 0) {
+            return [html];
+        }
+
+        // 重新整理索引，确保索引是连续的（0, 1, 2, 3...）
+        // 按照 DOM 顺序排序所有元素
+        console.log(`\n重新整理索引前，元素顺序：`);
+        allIndexedElementsList.forEach((el, idx) => {
+            const oldIndex = el.getAttribute('data-progressive-index');
+            let desc = '';
+            if (el.tagName === 'PRE' && el.classList.contains('code')) {
+                desc = `代码块: ${el.querySelector('code')?.textContent.substring(0, 30)}`;
+            } else if (el.classList.contains('mermaid')) {
+                desc = `Mermaid: ${el.textContent.substring(0, 30)}`;
+            } else {
+                desc = `${el.tagName}: ${el.textContent.substring(0, 30)}`;
+            }
+            console.log(`  [${idx}] 旧索引=${oldIndex}: ${desc}`);
+        });
+
+        // 按照 DOM 顺序排序：使用 TreeWalker 来确保正确的顺序
+        const sortedElements = [];
+        const sortWalker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_ELEMENT,
+            null
+        );
+        let sortNode;
+        while (sortNode = sortWalker.nextNode()) {
+            if (sortNode.hasAttribute('data-progressive-index')) {
+                sortedElements.push(sortNode);
+            }
+        }
+
+        // 使用排序后的元素列表替换原列表
+        allIndexedElementsList.length = 0;
+        allIndexedElementsList.push(...sortedElements);
+
+        // 重新分配连续的索引
+        allIndexedElementsList.forEach((el, idx) => {
+            el.setAttribute('data-progressive-index', idx.toString());
+        });
+
+        console.log(`\n重新整理索引后，元素顺序（按 DOM 顺序）：`);
+        allIndexedElementsList.forEach((el, idx) => {
+            let desc = '';
+            if (el.tagName === 'PRE' && el.classList.contains('code')) {
+                desc = `代码块: ${el.querySelector('code')?.textContent.substring(0, 30)}`;
+            } else if (el.classList.contains('mermaid')) {
+                desc = `Mermaid: ${el.textContent.substring(0, 30)}`;
+            } else {
+                desc = `${el.tagName}: ${el.textContent.substring(0, 30)}`;
+            }
+            console.log(`  [${idx}] 新索引=${idx}: ${desc}`);
+        });
+
+        // 生成渐进式幻灯片
+        const progressiveSlides = [];
+        // 最大索引就是元素数量 - 1
+        const maxIndex = allIndexedElementsList.length - 1;
+
+        for (let i = 0; i <= maxIndex; i++) {
+            const slideDiv = tempDiv.cloneNode(true);
+
+            // 找出当前页新增的元素（索引为 i 的元素）
+            const newElements = Array.from(tempDiv.querySelectorAll('[data-progressive-index]'))
+                .filter(el => parseInt(el.getAttribute('data-progressive-index')) === i);
+
+            // 检查是否有实际内容（由于已经过滤了空元素，这里应该总是有内容）
+            const hasRealContent = newElements.length > 0 && newElements.some(el => {
+                if (el.tagName === 'P' || el.tagName === 'LI') {
+                    return el.textContent.trim().length > 0;
+                } else if (el.tagName === 'TR') {
+                    return Array.from(el.querySelectorAll('td')).some(td => td.textContent.trim().length > 0);
+                } else if (el.tagName === 'PRE' && el.classList.contains('code')) {
+                    return el.querySelector('code')?.textContent.trim().length > 0;
+                } else if (el.classList.contains('mermaid')) {
+                    return el.textContent.trim().length > 0;
+                } else {
+                    return el.textContent.trim().length > 0;
+                }
+            });
+
+            // 如果没有实际内容，跳过这一页
+            if (!hasRealContent) {
+                console.log(`=== 第 ${i + 1} 页：无实际内容，跳过 ===`);
+                continue;
+            }
+
+            // 调试输出：显示当前页新增的内容
+            console.log(`=== 第 ${i + 1} 页新增内容 ===`);
+            newElements.forEach((el, idx) => {
+                let desc = '';
+                if (el.tagName === 'H1' || el.tagName === 'H2' || el.tagName === 'H3' ||
+                    el.tagName === 'H4' || el.tagName === 'H5' || el.tagName === 'H6') {
+                    desc = `标题: ${el.textContent.substring(0, 50)}`;
+                } else if (el.tagName === 'P') {
+                    desc = `段落: ${el.textContent.substring(0, 50)}`;
+                } else if (el.tagName === 'LI') {
+                    desc = `列表项: ${el.textContent.substring(0, 50)}`;
+                } else if (el.tagName === 'TR') {
+                    desc = `表格行: ${Array.from(el.querySelectorAll('td')).map(td => td.textContent).join(' | ')}`;
+                } else if (el.tagName === 'BLOCKQUOTE') {
+                    desc = `引用块: ${el.textContent.substring(0, 50)}`;
+                } else if (el.classList.contains('admonition')) {
+                    desc = `提示块: ${el.textContent.substring(0, 50)}`;
+                } else if (el.tagName === 'PRE' && el.classList.contains('code')) {
+                    const codeText = el.querySelector('code')?.textContent || '';
+                    desc = `代码块: ${codeText.substring(0, 50)}... (${codeText.length} 字符)`;
+                } else if (el.classList.contains('mermaid')) {
+                    desc = `Mermaid 图表: ${el.textContent.substring(0, 50)}`;
+                } else if (el.classList.contains('katex-display-wrapper')) {
+                    desc = `LaTeX 公式块`;
+                } else {
+                    desc = `${el.tagName}: ${el.textContent.substring(0, 50)}`;
+                }
+                console.log(`  [${idx + 1}] ${desc}`);
+            });
+
+            // 移除所有带索引的元素
+            const allProgressive = slideDiv.querySelectorAll('[data-progressive-index]');
+            allProgressive.forEach(el => {
+                const index = parseInt(el.getAttribute('data-progressive-index'));
+                // 只保留索引 <= i 的元素
+                if (index > i) {
+                    el.remove();
+                } else {
+                    // 移除 data 属性，保持 HTML 干净
+                    el.removeAttribute('data-progressive-index');
+                }
+            });
+
+            progressiveSlides.push(slideDiv.innerHTML);
+        }
+
+        console.log(`\n总共生成了 ${progressiveSlides.length} 页渐进式幻灯片\n`);
+
+        return progressiveSlides;
+    }
+
     function compileAndRender(forceFirst = false) {
         const text = dom.markdown.value ?? '';
         const parts = splitSlides(text);
-        slides = parts.map(s => mdToHtml(s.trim()));
+        const baseSlides = parts.map(s => mdToHtml(s.trim()));
+
+        // 计算每个基础幻灯片在文本中的行范围
+        slideLineRanges = [];
+        const lines = text.replace(/\r/g, '').split('\n');
+        let slideStartLine = 0;
+        let inCode = false;
+        let slideIndex = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^```/.test(line.trim())) inCode = !inCode;
+
+            // 如果遇到分隔符且不在代码块中，开始新的幻灯片
+            if (!inCode && line.trim() === '---' && i > slideStartLine) {
+                // 保存当前幻灯片的行范围
+                slideLineRanges.push({
+                    start: slideStartLine,
+                    end: i - 1, // 不包括分隔符本身
+                    slideIndex: slideIndex++
+                });
+                slideStartLine = i + 1; // 下一个幻灯片从分隔符的下一行开始
+            }
+        }
+
+        // 添加最后一个幻灯片
+        if (slideStartLine < lines.length) {
+            slideLineRanges.push({
+                start: slideStartLine,
+                end: lines.length - 1,
+                slideIndex: slideIndex
+            });
+        }
+
+        // 为每个幻灯片生成渐进式版本
+        slides = [];
+        let cumulativeSlideIndex = 0;
+        baseSlides.forEach((baseSlide, baseIndex) => {
+            const progressiveSlides = generateProgressiveSlides(baseSlide);
+            slides.push(...progressiveSlides);
+            // 更新行范围，记录该基础幻灯片对应的渐进式幻灯片索引范围
+            if (slideLineRanges[baseIndex]) {
+                slideLineRanges[baseIndex].progressiveStartIndex = cumulativeSlideIndex;
+                slideLineRanges[baseIndex].progressiveCount = progressiveSlides.length;
+            }
+            cumulativeSlideIndex += progressiveSlides.length;
+        });
+
         if (forceFirst) index = 0;
         if (index >= slides.length) index = Math.max(0, slides.length - 1);
         gotoSlide(index);
@@ -172,28 +857,34 @@
     // 新增 renderKaTeX 函数
     // 修改 renderKaTeX 函数，处理块引用中的数学公式
     function renderKaTeX() {
-        if (typeof renderMathInElement !== 'undefined') {
-            renderMathInElement(dom.currentSlide, {
-                delimiters: [
-                    { left: '$$', right: '$$', display: true },
-                    { left: '$', right: '$', display: false },
-                    { left: '\\(', right: '\\)', display: false },
-                    { left: '\\[', right: '\\]', display: true }
-                ],
-                throwOnError: false,
-                errorColor: '#ff5252'
-            });
-        }
+        // 使用 requestAnimationFrame 来避免渲染闪烁
+        requestAnimationFrame(() => {
+            if (typeof renderMathInElement !== 'undefined') {
+                renderMathInElement(dom.currentSlide, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false },
+                        { left: '\\(', right: '\\)', display: false },
+                        { left: '\\[', right: '\\]', display: true }
+                    ],
+                    throwOnError: false,
+                    errorColor: '#ff5252'
+                });
+            }
 
-        // 渲染代码高亮
-        if (typeof hljs !== 'undefined') {
-            dom.currentSlide.querySelectorAll('pre.code code').forEach((block) => {
-                hljs.highlightElement(block);
-            });
-        }
+            // 渲染代码高亮
+            if (typeof hljs !== 'undefined') {
+                dom.currentSlide.querySelectorAll('pre.code code').forEach((block) => {
+                    // 如果已经高亮过，跳过
+                    if (!block.classList.contains('hljs')) {
+                        hljs.highlightElement(block);
+                    }
+                });
+            }
 
-        // 渲染 Mermaid
-        renderMermaid();
+            // 渲染 Mermaid
+            renderMermaid();
+        });
     }
 
     function splitSlides(text) {
@@ -220,19 +911,30 @@
     function mdToHtml(md) {
         if (!md.trim()) return '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:18px;">(Empty slide)</div>';
 
-        let text = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-        // 1. 先提取 LaTeX 公式块（$$...$$ 和 \[...\]），若有 blockquote 前缀，去掉前缀后存储
+        // 1. 先提取 LaTeX 公式块（在转义之前），保存原始内容
         const latexBlocks = [];
-        text = text.replace(/(^|\n)(&gt;\s*)?(\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$)/g, (_, lead, quote, body) => {
+        // 先处理 \[...\] 格式
+        let text = md.replace(/(^|\n)(>\s*)?(\\\[[\s\S]*?\\\])/g, (_, lead, quote, body) => {
             const i = latexBlocks.length;
-            const cleaned = body.replace(/(^|\n)&gt;\s?/g, '$1');
+            // 保存原始内容（未转义），去掉 blockquote 前缀
+            const cleaned = body.replace(/(^|\n)>\s?/g, '$1');
             latexBlocks.push(cleaned);
             const placeholder = `\uE001LATEXBLOCK${i}\uE001`;
+            // 保留 blockquote 前缀（如果有），稍后会被转义
+            return `${lead || ''}${quote || ''}${placeholder}`;
+        });
+        // 再处理 $$...$$ 格式
+        text = text.replace(/(^|\n)(>\s*)?(\$\$[\s\S]*?\$\$)/g, (_, lead, quote, body) => {
+            const i = latexBlocks.length;
+            // 保存原始内容（未转义），去掉 blockquote 前缀
+            const cleaned = body.replace(/(^|\n)>\s?/g, '$1');
+            latexBlocks.push(cleaned);
+            const placeholder = `\uE001LATEXBLOCK${i}\uE001`;
+            // 保留 blockquote 前缀（如果有），稍后会被转义
             return `${lead || ''}${quote || ''}${placeholder}`;
         });
 
-        // 2. 提取 fenced code blocks（含 mermaid）
+        // 2. 提取 fenced code blocks（含 mermaid）- 在转义之前提取，保留原始内容
         const codeBlocks = [];
         text = text.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (m, lang, code) => {
             const i = codeBlocks.length;
@@ -242,9 +944,13 @@
                 return `\uE000CODEBLOCK${i}\uE000`;
             }
             const langClass = lang ? ` class="language-${escapeHtmlAttr(lang)}"` : '';
+            // code 内容还没有被转义，需要转义
             codeBlocks.push(`<pre class="code"><code${langClass}>${escapeHtml(code)}</code></pre>`);
             return `\uE000CODEBLOCK${i}\uE000`;
         });
+
+        // 3. 现在转义文本（LaTeX 块和代码块已经被占位符替换，不会被转义）
+        text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         // 3. 处理提示块（> [!NOTE] 这类）
         let admonitions = [];
         ({ text, admonitions } = transformAdmonitions(text));
@@ -265,17 +971,20 @@
 
             // 对于 $$...$$ 格式的公式，确保它们被包裹在适当的元素中
             if (latex.startsWith('$$') && latex.endsWith('$$')) {
-                const content = latex.slice(2, -2).trim();
-                // 将连续的 $$ 公式分割成独立的公式
-                const formulas = content.split(/\$\$/).filter(f => f.trim());
+                // 保留完整的公式内容，包括换行符（对多行公式很重要）
+                // 只去掉开头和结尾的 $$，保留中间的所有内容
+                const content = latex.slice(2, -2);
+                // 检查是否包含多个独立的公式（通过查找中间的 $$ 分隔符）
+                // 但要注意：公式内容中不应该有 $$，所以如果有 $$，可能是多个公式
+                const formulas = content.split(/\n\s*\$\$\s*\n/).filter(f => f.trim());
 
                 if (formulas.length > 1) {
                     // 多个公式，每个单独渲染
                     return formulas.map(formula =>
-                        `<div class="katex-display-wrapper">$$${formula}$$</div>`
+                        `<div class="katex-display-wrapper">$$${formula.trim()}$$</div>`
                     ).join('\n');
                 } else {
-                    // 单个公式
+                    // 单个公式，保留原始格式（包括换行符）
                     return `<div class="katex-display-wrapper">${latex}</div>`;
                 }
             }
@@ -292,7 +1001,7 @@
     function blockify(src) {
         const lines = src.split('\n');
         let out = '';
-        let inUl = false, inOl = false, bqDepth = 0, para = '';
+        let inUl = false, inOl = false, inTaskList = false, bqDepth = 0, para = '';
 
         const flushPara = () => {
             if (para.trim()) out += `<p>${inlineify(para.trim())}</p>`;
@@ -301,6 +1010,7 @@
         const closeLists = () => {
             if (inUl) { out += '</ul>'; inUl = false; }
             if (inOl) { out += '</ol>'; inOl = false; }
+            if (inTaskList) { out += '</ul>'; inTaskList = false; }
         };
         const closeQuote = () => {
             while (bqDepth > 0) {
@@ -368,10 +1078,22 @@
                 continue;
             }
 
+            // Task list: - [ ] or - [x]
+            const task = /^\s*[-+*]\s+\[([ xX])\]\s+(.*)$/.exec(line);
+            if (task) {
+                flushPara(); closeQuote();
+                closeLists(); // 关闭其他列表
+                if (!inTaskList) { out += '<ul class="task-list">'; inTaskList = true; }
+                const checked = task[1].toLowerCase() === 'x';
+                out += `<li class="task-item"><input type="checkbox" ${checked ? 'checked' : ''} disabled><span>${inlineify(task[2])}</span></li>`;
+                continue;
+            }
+
             // Unordered list
             const ul = /^\s*[-+*]\s+(.*)$/.exec(line);
             if (ul) {
                 flushPara(); closeQuote();
+                closeLists(); // 关闭任务列表
                 if (!inUl) { out += '<ul>'; inUl = true; }
                 out += `<li>${inlineify(ul[1])}</li>`;
                 continue;
@@ -381,6 +1103,7 @@
             const ol = /^\s*\d+[\.)]\s+(.*)$/.exec(line);
             if (ol) {
                 flushPara(); closeQuote();
+                closeLists(); // 关闭任务列表
                 if (!inOl) { out += '<ol>'; inOl = true; }
                 out += `<li>${inlineify(ol[1])}</li>`;
                 continue;
@@ -463,6 +1186,10 @@
         }
         const blocks = dom.currentSlide.querySelectorAll('.mermaid');
         blocks.forEach((el, idx) => {
+            // 如果已经渲染过（有 mermaid-render 父元素），跳过
+            if (el.parentElement && el.parentElement.classList.contains('mermaid-render')) {
+                return;
+            }
             const code = (el.textContent || '').trim();
             const id = `mmd-${Date.now()}-${idx}`;
             const container = document.createElement('div');
@@ -526,28 +1253,102 @@
             mathSpans.push(math);
             return `\uE002MATH${i}\uE002`;
         });
-        // Images ![alt](src "title")
+        // 先提取链接和图片（使用占位符），以便先处理内联格式
+        const linkPlaceholders = [];
+        const imgPlaceholders = [];
+        const imgLinkPlaceholders = [];
+
+        // 1. 先提取图片嵌套在链接中的情况：[![](src)](href)
+        s = s.replace(/\[!\[([^\]]*)\]\(([^\s\)]+)(?:\s+"([^"]+)")?\)\]\(([^\s\)]+)(?:\s+"([^"]+)")?\)/g, (m, alt, imgSrc, imgTitle, href, linkTitle) => {
+            const i = imgLinkPlaceholders.length;
+            imgLinkPlaceholders.push({ alt, imgSrc, imgTitle, href, linkTitle });
+            return `\uE004IMGLINK${i}\uE004`;
+        });
+
+        // 2. 提取单独的图片 ![alt](src "title")
         s = s.replace(/!\[([^\]]*)\]\(([^\s\)]+)(?:\s+"([^"]+)")?\)/g, (m, alt, src, title) => {
-            const safeSrc = sanitizeUrlForImg(unescapeMdLink(src));
-            const safeAlt = escapeHtmlAttr(alt);
-            const safeTitle = title ? ` title="${escapeHtmlAttr(title)}"` : '';
-            if (!safeSrc) return alt ? `<em>${safeAlt}</em>` : '';
-            return `<img alt="${safeAlt}" src="${safeSrc}"${safeTitle} />`;
+            const i = imgPlaceholders.length;
+            imgPlaceholders.push({ alt, src, title });
+            return `\uE005IMG${i}\uE005`;
         });
 
-        // Links [text](href "title")
+        // 3. 提取单独的链接 [text](href "title")，并在提取时处理链接文本内的内联格式
         s = s.replace(/\[([^\]]+)\]\(([^\s\)]+)(?:\s+"([^"]+)")?\)/g, (m, txt, href, title) => {
-            const safeHref = sanitizeUrl(unescapeMdLink(href));
-            const safeTxt = escapeHtmlAttr(txt);
-            const safeTitle = title ? ` title="${escapeHtmlAttr(title)}"` : '';
-            if (!safeHref) return safeTxt;
-            return `<a href="${safeHref}" target="_blank" rel="noopener"${safeTitle}>${safeTxt}</a>`;
+            // 先处理链接文本内的内联格式
+            let processedTxt = txt;
+            // Bold **text** or __text__
+            processedTxt = processedTxt.replace(/(\*\*|__)(.+?)\1/g, '<strong>$2</strong>');
+            // Italic *text* or _text_
+            processedTxt = processedTxt.replace(/(\*|_)([^*_]+?)\1/g, '<em>$2</em>');
+            // Strikethrough ~~text~~
+            processedTxt = processedTxt.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+            const i = linkPlaceholders.length;
+            linkPlaceholders.push({ txt: processedTxt, href, title });
+            return `\uE006LINK${i}\uE006`;
         });
 
+        // 4. 处理剩余的内联格式（不在链接内的）
         // Bold **text** or __text__
         s = s.replace(/(\*\*|__)(.+?)\1/g, '<strong>$2</strong>');
         // Italic *text* or _text_
         s = s.replace(/(\*|_)([^*_]+?)\1/g, '<em>$2</em>');
+        // Strikethrough ~~text~~
+        s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+        // 5. 恢复图片嵌套在链接中的情况
+        s = s.replace(/\uE004IMGLINK(\d+)\uE004/g, (_, i) => {
+            const p = imgLinkPlaceholders[Number(i)];
+            if (!p) return '';
+            const safeImgSrc = sanitizeUrlForImg(unescapeMdLink(p.imgSrc));
+            const safeAlt = escapeHtmlAttr(p.alt);
+            const safeImgTitle = p.imgTitle ? ` title="${escapeHtmlAttr(p.imgTitle)}"` : '';
+            const safeHref = sanitizeUrl(unescapeMdLink(p.href));
+            const safeLinkTitle = p.linkTitle ? ` title="${escapeHtmlAttr(p.linkTitle)}"` : '';
+            if (!safeImgSrc || !safeHref) return '';
+            return `<a href="${safeHref}" target="_blank" rel="noopener"${safeLinkTitle}><img alt="${safeAlt}" src="${safeImgSrc}"${safeImgTitle} /></a>`;
+        });
+
+        // 6. 恢复单独的图片
+        s = s.replace(/\uE005IMG(\d+)\uE005/g, (_, i) => {
+            const p = imgPlaceholders[Number(i)];
+            if (!p) return '';
+            const safeSrc = sanitizeUrlForImg(unescapeMdLink(p.src));
+            const safeAlt = escapeHtmlAttr(p.alt);
+            const safeTitle = p.title ? ` title="${escapeHtmlAttr(p.title)}"` : '';
+            if (!safeSrc) return p.alt ? `<em>${safeAlt}</em>` : '';
+            return `<img alt="${safeAlt}" src="${safeSrc}"${safeTitle} />`;
+        });
+
+        // 7. 恢复单独的链接（链接文本中的内联格式已经在提取时处理成 HTML）
+        s = s.replace(/\uE006LINK(\d+)\uE006/g, (_, i) => {
+            const p = linkPlaceholders[Number(i)];
+            if (!p) return '';
+            const safeHref = sanitizeUrl(unescapeMdLink(p.href));
+            const safeTitle = p.title ? ` title="${escapeHtmlAttr(p.title)}"` : '';
+            if (!safeHref) return p.txt; // 如果链接无效，返回已处理的文本（可能已包含 HTML 标签）
+            // 链接文本已经包含 HTML 标签（如 <strong>、<em>、<del>），直接使用
+            return `<a href="${safeHref}" target="_blank" rel="noopener"${safeTitle}>${p.txt}</a>`;
+        });
+
+        // Autolinks <url> or <email@example.com>
+        // 注意：此时 < 和 > 已经被转义为 &lt; 和 &gt;
+        // 匹配 &lt;...&gt;，内容中可能包含 &amp;（转义的 &）
+        s = s.replace(/&lt;((?:[^&]|&amp;)+?)&gt;/g, (m, content) => {
+            // 先还原转义的 &amp; 为 &
+            const decoded = content.replace(/&amp;/g, '&');
+            // 检查是否是邮箱地址
+            if (/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/i.test(decoded)) {
+                return `<a href="mailto:${escapeHtmlAttr(decoded)}">${escapeHtml(decoded)}</a>`;
+            }
+            // 检查是否是 URL（http://, https://, 或协议相对 URL）
+            const safeUrl = sanitizeUrl(decoded);
+            if (safeUrl) {
+                return `<a href="${safeUrl}" target="_blank" rel="noopener">${escapeHtml(decoded)}</a>`;
+            }
+            // 不是有效的链接，保持原样
+            return m;
+        });
 
         s = s.replace(/`([^`]+?)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
 
@@ -657,7 +1458,7 @@
             // ====== 在 PDF 上添加可点链接 ======
             // 计算 container 在页面上的 clientRect（克隆在页面上，所以有真实的 rect）
             const containerRect = container.getBoundingClientRect();
-            // 获取所有链接（相对于 cloneStage 的链接）
+            // 获取所有链接（相对于 cloneStage 的链接），包括包裹图片的链接
             const anchors = cloneStage.querySelectorAll('a[href]');
             anchors.forEach(a => {
                 try {
@@ -666,7 +1467,16 @@
                     // 跳过 javascript: 或 空锚
                     if (/^\s*(javascript:|#)/i.test(href)) return;
 
-                    const rect = a.getBoundingClientRect();
+                    // 如果链接内包含图片，使用图片的尺寸；否则使用链接本身的尺寸
+                    const img = a.querySelector('img');
+                    let rect;
+                    if (img) {
+                        // 图片链接：使用图片的边界框
+                        rect = img.getBoundingClientRect();
+                    } else {
+                        // 普通链接：使用链接的边界框
+                        rect = a.getBoundingClientRect();
+                    }
 
                     // 计算相对于 container 的位置（CSS 像素）
                     const relLeft = rect.left - containerRect.left;
