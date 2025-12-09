@@ -362,6 +362,14 @@ textarea#markdownInput {
     margin: 8px 0 10px;
 }
 
+.slide ol {
+    list-style-type: decimal;
+}
+
+.slide ol li {
+    display: list-item;
+}
+
 .slide li {
     margin: 6px 0;
 }

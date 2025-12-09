@@ -95,6 +95,12 @@ $$
 1. 有序
 1. 列表
 
+1. 这是第一个
+  - 这是描述
+  - 这也是描述
+    - 这还是描述
+1. 这是第二个
+
 ---
 
 这是 mermaid：
@@ -357,103 +363,68 @@ print(a + b)
         const mouseY = e.clientY - rect.top;
 
         // 计算鼠标所在的行号
-        // 使用 textarea 的实际行高和 padding
+        // 使用更可靠的方法：通过 textarea 的 selectionStart 来计算行号
+        // 首先计算鼠标点击位置对应的字符位置
         const styles = window.getComputedStyle(textarea);
         const lineHeight = parseFloat(styles.lineHeight) || 20;
         const paddingTop = parseFloat(styles.paddingTop) || 0;
         const borderTop = parseFloat(styles.borderTopWidth) || 0;
         const scrollTop = textarea.scrollTop;
 
+        // 获取文本内容
+        const lines = dom.markdown.value.replace(/\r/g, '').split('\n');
+
         // 计算鼠标所在的行号（从 0 开始）
         // mouseY 是相对于 textarea 顶部的位置，加上 scrollTop 得到在文本中的位置
         const textY = mouseY + scrollTop - paddingTop - borderTop;
-        const lineNumber = Math.max(0, Math.floor(textY / lineHeight));
+        // 使用 Math.round 而不是 Math.floor，使计算更准确
+        let lineNumber = Math.max(0, Math.round(textY / lineHeight));
 
-        // 获取文本内容，检查点击的行是否是分隔符
-        const lines = dom.markdown.value.replace(/\r/g, '').split('\n');
+        // 确保行号不超过文本的实际行数
+        lineNumber = Math.min(lineNumber, lines.length - 1);
+
+        // 如果计算出的行号是空行，尝试向上查找最近的非空行
+        // 这样可以避免点击在空行时匹配错误
+        if (lines[lineNumber] && lines[lineNumber].trim() === '' && lineNumber > 0) {
+            // 向上查找最近的非空行
+            for (let i = lineNumber - 1; i >= 0; i--) {
+                if (lines[i] && lines[i].trim() !== '') {
+                    lineNumber = i;
+                    break;
+                }
+            }
+        }
+
+        // 获取点击的行内容
         const clickedLine = lines[lineNumber] || '';
 
-        // 如果点击的是分隔符行（---），跳转到分隔符后的幻灯片
-        if (clickedLine.trim() === '---') {
-            // 找到分隔符后的第一个幻灯片
-            for (let i = 0; i < slideLineRanges.length; i++) {
-                const range = slideLineRanges[i];
-                if (range.start > lineNumber) {
-                    // 返回该基础幻灯片的最后一页渐进式幻灯片索引
-                    if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
-                        return range.progressiveStartIndex + range.progressiveCount - 1;
-                    }
-                    return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
-                }
-            }
-            // 如果分隔符在最后，返回最后一个幻灯片
-            if (slideLineRanges.length > 0) {
-                const lastRange = slideLineRanges[slideLineRanges.length - 1];
-                if (lastRange.progressiveStartIndex !== undefined && lastRange.progressiveCount !== undefined) {
-                    return lastRange.progressiveStartIndex + lastRange.progressiveCount - 1;
-                }
-                return lastRange.progressiveStartIndex !== undefined ? lastRange.progressiveStartIndex : 0;
+        // 基于分割线计数来确定属于哪个基础幻灯片
+        // 从开头到当前行（包含）统计非代码块中的分割线数量
+        let baseSlideIndex = 0;
+        let inCode = false;
+        for (let i = 0; i <= lineNumber && i < lines.length; i++) {
+            const line = lines[i];
+            if (/^```/.test(line.trim())) inCode = !inCode;
+            if (!inCode && line.trim() === '---') {
+                // 分割线之后才算下一张幻灯片
+                if (i < lineNumber) baseSlideIndex++;
             }
         }
 
-        // 找到对应的幻灯片（精确匹配）
-        for (let i = 0; i < slideLineRanges.length; i++) {
-            const range = slideLineRanges[i];
-            // 精确匹配：行号必须在范围内
-            if (lineNumber >= range.start && lineNumber <= range.end) {
-                // 返回该基础幻灯片的最后一页渐进式幻灯片索引（显示最完整）
-                if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
-                    return range.progressiveStartIndex + range.progressiveCount - 1;
-                }
-                return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
-            }
+        // 防护：边界
+        if (baseSlideIndex < 0) baseSlideIndex = 0;
+        if (baseSlideIndex >= slideLineRanges.length) baseSlideIndex = slideLineRanges.length - 1;
+
+        const range = slideLineRanges[baseSlideIndex];
+        if (!range) return -1;
+
+        console.log(`\n点击位置: 行 ${lineNumber}, 内容: "${clickedLine.substring(0, 50)}"`);
+        console.log(`归属基础幻灯片索引: ${baseSlideIndex}, 行范围 ${range.start}-${range.end}, 渐进式索引 ${range.progressiveStartIndex}-${range.progressiveStartIndex + (range.progressiveCount || 1) - 1}`);
+
+        if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
+            return range.progressiveStartIndex + range.progressiveCount - 1;
         }
-
-        // 如果点击的行不在任何幻灯片的范围内，找到它应该属于的幻灯片
-        // 遍历所有幻灯片，找到点击行应该属于的幻灯片
-        for (let i = 0; i < slideLineRanges.length; i++) {
-            const range = slideLineRanges[i];
-            const nextRange = slideLineRanges[i + 1];
-
-            // 如果点击的行在当前幻灯片的结束行之后
-            if (lineNumber > range.end) {
-                // 如果有下一个幻灯片，且点击的行在下一个幻灯片的起始行之前，属于当前幻灯片
-                if (nextRange && lineNumber < nextRange.start) {
-                    // 返回当前幻灯片的最后一页（空行和分隔符属于前面的幻灯片）
-                    if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
-                        return range.progressiveStartIndex + range.progressiveCount - 1;
-                    }
-                    return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
-                }
-                // 如果没有下一个幻灯片，且点击的行在最后一个幻灯片的结束行之后，属于最后一个幻灯片
-                if (!nextRange) {
-                    if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
-                        return range.progressiveStartIndex + range.progressiveCount - 1;
-                    }
-                    return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
-                }
-            }
-        }
-
-        // 如果鼠标在第一个幻灯片之前，返回第一个幻灯片的最后一页
-        if (slideLineRanges.length > 0 && lineNumber < slideLineRanges[0].start) {
-            const firstRange = slideLineRanges[0];
-            if (firstRange.progressiveStartIndex !== undefined && firstRange.progressiveCount !== undefined) {
-                return firstRange.progressiveStartIndex + firstRange.progressiveCount - 1;
-            }
-            return firstRange.progressiveStartIndex !== undefined ? firstRange.progressiveStartIndex : 0;
-        }
-
-        // 如果鼠标在最后一个幻灯片之后，返回最后一个幻灯片的最后一页
-        if (slideLineRanges.length > 0) {
-            const lastRange = slideLineRanges[slideLineRanges.length - 1];
-            if (lastRange.progressiveStartIndex !== undefined && lastRange.progressiveCount !== undefined) {
-                return lastRange.progressiveStartIndex + lastRange.progressiveCount - 1;
-            }
-            return lastRange.progressiveStartIndex !== undefined ? lastRange.progressiveStartIndex : 0;
-        }
-
-        return -1;
+        return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
     }
 
     // 监听 textarea 的点击事件（聚焦时跳转）
@@ -913,18 +884,11 @@ print(a + b)
 
             // 如果遇到分隔符且不在代码块中，开始新的幻灯片
             if (!inCode && line.trim() === '---' && i > slideStartLine) {
-                // 找到当前幻灯片的实际结束行（跳过末尾的空行）
-                let actualEndLine = i - 1;
-                while (actualEndLine >= slideStartLine && lines[actualEndLine].trim() === '') {
-                    actualEndLine--;
-                }
+                // 当前幻灯片的结束行是分隔符的前一行（包括空行）
+                // 这样确保点击在幻灯片末尾的任何位置（包括空行）都能正确匹配
+                const actualEndLine = i - 1;
 
-                // 如果实际结束行小于起始行，说明只有空行，使用起始行作为结束行
-                if (actualEndLine < slideStartLine) {
-                    actualEndLine = slideStartLine;
-                }
-
-                // 保存当前幻灯片的行范围
+                // 保存当前幻灯片的行范围（包含所有行，包括末尾的空行）
                 slideLineRanges.push({
                     start: slideStartLine,
                     end: actualEndLine,
@@ -936,16 +900,9 @@ print(a + b)
 
         // 添加最后一个幻灯片
         if (slideStartLine < lines.length) {
-            // 找到最后一个幻灯片的实际结束行（跳过末尾的空行）
-            let actualEndLine = lines.length - 1;
-            while (actualEndLine >= slideStartLine && lines[actualEndLine].trim() === '') {
-                actualEndLine--;
-            }
-
-            // 如果实际结束行小于起始行，说明只有空行，使用起始行作为结束行
-            if (actualEndLine < slideStartLine) {
-                actualEndLine = slideStartLine;
-            }
+            // 最后一个幻灯片的结束行是文件的最后一行（包括末尾的空行）
+            // 这样确保点击在幻灯片末尾的任何位置（包括空行）都能正确匹配
+            const actualEndLine = lines.length - 1;
 
             slideLineRanges.push({
                 start: slideStartLine,
@@ -953,6 +910,16 @@ print(a + b)
                 slideIndex: slideIndex
             });
         }
+
+        // 调试输出：显示每个幻灯片的行范围
+        console.log('\n========== 幻灯片行范围 ==========');
+        slideLineRanges.forEach((range, idx) => {
+            const previewStart = lines[range.start]?.substring(0, 30) || '';
+            const previewEnd = lines[range.end]?.substring(0, 30) || '';
+            console.log(`幻灯片 ${idx}: 行 ${range.start} - ${range.end} (共 ${range.end - range.start + 1} 行)`);
+            console.log(`  起始: "${previewStart}..."`);
+            console.log(`  结束: "${previewEnd}..."`);
+        });
 
         // 为每个幻灯片生成渐进式版本
         slides = [];
@@ -1120,15 +1087,30 @@ print(a + b)
         const lines = src.split('\n');
         let out = '';
         let inUl = false, inOl = false, inTaskList = false, bqDepth = 0, para = '';
+        let ulDepth = 0; // 无序列表的嵌套层级
+        const ulDepths = []; // 存储每个层级的缩进
 
         const flushPara = () => {
             if (para.trim()) out += `<p>${inlineify(para.trim())}</p>`;
             para = '';
         };
         const closeLists = () => {
+            // 关闭所有嵌套的无序列表
+            while (ulDepth > 0) {
+                out += '</ul>';
+                ulDepth--;
+            }
+            ulDepths.length = 0;
             if (inUl) { out += '</ul>'; inUl = false; }
             if (inOl) { out += '</ol>'; inOl = false; }
             if (inTaskList) { out += '</ul>'; inTaskList = false; }
+        };
+
+        // 获取无序列表的样式类型（根据层级）
+        const getUlStyle = (depth) => {
+            if (depth === 0) return 'disc';      // 第一层：黑圆
+            if (depth === 1) return 'circle';    // 第二层：白圆
+            return 'square';                     // 第三层及以后：黑方框
         };
         const closeQuote = () => {
             while (bqDepth > 0) {
@@ -1159,7 +1141,9 @@ print(a + b)
             }
             if (!line.trim()) { // blank line
                 flushPara();
-                closeLists();
+                // 空行关闭有序列表（有序列表遇到空行应该断开）
+                if (inOl) { out += '</ol>'; inOl = false; }
+                // 空行不关闭无序列表，让无序列表可以跨行继续
                 closeQuote();
                 continue;
             }
@@ -1208,22 +1192,90 @@ print(a + b)
             }
 
             // Unordered list
-            const ul = /^\s*[-+*]\s+(.*)$/.exec(line);
+            const ul = /^(\s*)[-+*]\s+(.*)$/.exec(line);
             if (ul) {
                 flushPara(); closeQuote();
-                closeLists(); // 关闭任务列表
-                if (!inUl) { out += '<ul>'; inUl = true; }
-                out += `<li>${inlineify(ul[1])}</li>`;
+                // 关闭任务列表
+                if (inTaskList) { out += '</ul>'; inTaskList = false; }
+
+                // 计算当前行的缩进层级（每2个空格或1个tab为一级）
+                const indent = ul[1];
+                const indentLevel = Math.floor(indent.replace(/\t/g, '  ').length / 2);
+
+                // 如果缩进层级 > 0，可能是嵌套在有序列表或其他列表中的
+                // 只有在缩进层级为 0 时才关闭有序列表
+                if (indentLevel === 0 && inOl) {
+                    out += '</ol>';
+                    inOl = false;
+                }
+
+                // 关闭超出当前层级的无序列表
+                while (ulDepth > indentLevel) {
+                    out += '</ul>';
+                    ulDepths.pop();
+                    ulDepth--;
+                }
+
+                // 打开需要的新层级
+                while (ulDepth < indentLevel) {
+                    const style = getUlStyle(ulDepth);
+                    out += `<ul style="list-style-type: ${style}">`;
+                    ulDepths.push(ulDepth);
+                    ulDepth++;
+                }
+
+                // 如果当前层级还没有打开，打开它
+                if (ulDepth === indentLevel && (ulDepths.length === 0 || ulDepths[ulDepths.length - 1] !== indentLevel)) {
+                    const style = getUlStyle(ulDepth);
+                    out += `<ul style="list-style-type: ${style}">`;
+                    ulDepths.push(ulDepth);
+                    ulDepth++;
+                }
+
+                out += `<li>${inlineify(ul[2])}</li>`;
+                inUl = true;
                 continue;
             }
 
             // Ordered list
-            const ol = /^\s*\d+[\.)]\s+(.*)$/.exec(line);
+            const ol = /^(\s*)\d+[\.)]\s+(.*)$/.exec(line);
             if (ol) {
                 flushPara(); closeQuote();
-                closeLists(); // 关闭任务列表
-                if (!inOl) { out += '<ol>'; inOl = true; }
-                out += `<li>${inlineify(ol[1])}</li>`;
+                // 关闭任务列表
+                if (inTaskList) { out += '</ul>'; inTaskList = false; }
+
+                // 计算缩进层级
+                const indent = ol[1];
+                const indentLevel = Math.floor(indent.replace(/\t/g, '  ').length / 2);
+
+                // 如果缩进层级为 0，关闭无序列表（但不关闭有序列表，保持连续性）
+                if (indentLevel === 0) {
+                    // 关闭所有嵌套的无序列表
+                    while (ulDepth > 0) {
+                        out += '</ul>';
+                        ulDepths.pop();
+                        ulDepth--;
+                    }
+                    if (inUl) { out += '</ul>'; inUl = false; }
+                    // 顶级有序列表：如果还没有打开，就打开它
+                    if (!inOl) { out += '<ol>'; inOl = true; }
+                } else if (indentLevel > 0) {
+                    // 嵌套的有序列表：关闭超出当前层级的所有列表
+                    while (ulDepth > indentLevel) {
+                        out += '</ul>';
+                        ulDepths.pop();
+                        ulDepth--;
+                    }
+                    // 如果当前层级是有序列表，需要先关闭它
+                    if (inOl) { out += '</ol>'; inOl = false; }
+                    // 打开新的有序列表（作为嵌套列表）
+                    out += '<ol>';
+                    inOl = true;
+                }
+
+                // ol[2] 是捕获的内容部分（去掉了数字和点/括号）
+                const content = (ol[2] || '').trim();
+                out += `<li>${inlineify(content)}</li>`;
                 continue;
             }
 
