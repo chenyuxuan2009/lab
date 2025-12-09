@@ -472,11 +472,11 @@ textarea#markdownInput {
 
 /* 行内代码样式 - 只应用于不在 pre 内的 code 标签 */
 .slide code:not(pre code) {
-    background: var(--code-bg);
-    color: var(--code-fg);
-    padding: 2px 6px;
-    border-radius: 6px;
-    border: 1px solid var(--outline);
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--outline);
     font-size: 0.9em;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
@@ -505,15 +505,37 @@ textarea#markdownInput {
 
 .slide table.md-table th,
 .slide table.md-table td {
-    border: 1px solid var(--outline);
+    border: 1px solid #cbd5e1; /* 更明显的表格边框 */
     padding: 8px 10px;
-    text-align: left;
+    text-align: left; /* 默认左对齐 */
 }
 
 .slide table.md-table th {
-    background: var(--surface);
+    background: #f1f5f9; /* 表头浅灰背景 */
     color: var(--slide-title);
     font-weight: 700;
+}
+
+/* 表格对齐：尊重 Markdown 对齐语法（:--- 左, :---: 中, ---: 右） */
+.slide table.md-table th[align="center"],
+.slide table.md-table td[align="center"] {
+    text-align: center;
+}
+
+.slide table.md-table th[align="right"],
+.slide table.md-table td[align="right"] {
+    text-align: right;
+}
+
+/* 暗色主题的表格样式 */
+[data-theme="dark"] .slide table.md-table th,
+[data-theme="dark"] .slide table.md-table td {
+    border: 1px solid #475569;
+}
+
+[data-theme="dark"] .slide table.md-table th {
+    background: #1f2937;
+    color: #e5e7eb;
 }
 
 /* Admonition blocks */

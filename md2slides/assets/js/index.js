@@ -183,9 +183,9 @@ print(a + b)
 
 ---
 
-| 这是表格         | 这是表格的第二列       |
-| ---------------- | ---------------------- |
-| 这是表格的第二行 | 这是表格的第二行第二列 |
+| 第一列，居左 | 第二列，居中 | 第三列，居右 |
+| :----------- | :----------: | -----------: |
+| 第二行       |    第二行    |       第二行 |
 
 - [ ] 这是任务列表
 - [x] 这是已完成任务
@@ -1236,33 +1236,25 @@ print(a + b)
                 const indent = ul[1];
                 const indentLevel = Math.floor(indent.replace(/\t/g, '  ').length / 2);
 
-                // 如果缩进层级 > 0，可能是嵌套在有序列表或其他列表中的
-                // 只有在缩进层级为 0 时才关闭有序列表
+                // 顶层无序列表时，关闭有序列表
                 if (indentLevel === 0 && inOl) {
                     out += '</ol>';
                     inOl = false;
                 }
 
-                // 关闭超出当前层级的无序列表
-                while (ulDepth > indentLevel) {
+                // 目标打开深度 = 缩进层级 + 1（根列表算一层）
+                const targetDepth = indentLevel + 1;
+
+                // 关闭多余层级
+                while (ulDepth > targetDepth) {
                     out += '</ul>';
-                    ulDepths.pop();
                     ulDepth--;
                 }
 
-                // 打开需要的新层级
-                while (ulDepth < indentLevel) {
-                    const style = getUlStyle(ulDepth);
+                // 打开缺失层级
+                while (ulDepth < targetDepth) {
+                    const style = getUlStyle(ulDepth); // 当前深度决定样式
                     out += `<ul style="list-style-type: ${style}">`;
-                    ulDepths.push(ulDepth);
-                    ulDepth++;
-                }
-
-                // 如果当前层级还没有打开，打开它
-                if (ulDepth === indentLevel && (ulDepths.length === 0 || ulDepths[ulDepths.length - 1] !== indentLevel)) {
-                    const style = getUlStyle(ulDepth);
-                    out += `<ul style="list-style-type: ${style}">`;
-                    ulDepths.push(ulDepth);
                     ulDepth++;
                 }
 
