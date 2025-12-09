@@ -19,6 +19,7 @@
         next: $('#nextBtn'),
         fullscreenTop: $('#fullscreenTop'),
         saveContent: $('#saveContent'),
+        exportBtn: $('#exportPdf'),
         stageWrapper: document.querySelector('.stage-wrapper'),
     };
 
@@ -230,6 +231,7 @@ print(a + b)
     let slides = [];
     let index = 0;
     let slideLineRanges = []; // 存储每个基础幻灯片在文本中的行范围 [{start: 0, end: 10, slideIndex: 0}, ...]
+    let exportingPdf = false; // 防止重复导出
 
     // Setup theme from preference/localStorage
     const savedTheme = localStorage.getItem('m2s-theme');
@@ -1581,130 +1583,150 @@ print(a + b)
     function unescapeMdLink(s) {
         return s.replace(/\((?=.*\))/g, '%28').replace(/\)/g, '%29');
     }
-    document.getElementById('exportPdf').addEventListener('click', async () => {
-        compileAndRender();
+    if (dom.exportBtn) {
+        dom.exportBtn.addEventListener('click', async () => {
+            if (exportingPdf) return; // 已在导出中，直接忽略
+            exportingPdf = true;
 
-        const { jsPDF } = window.jspdf;
+            // 记录按钮状态并禁用，避免重复点击
+            const btn = dom.exportBtn;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Exporting...';
 
-        const LEFT_MARGIN = 56;
-        const RIGHT_MARGIN = 56;
-        const TOP_MARGIN = 48;
-        const BOTTOM_MARGIN = 48;
+            try {
+                compileAndRender();
 
-        const STAGE_W = 1280;
-        const STAGE_H = 720;
+                const { jsPDF } = window.jspdf;
 
-        const PDF_W = STAGE_W + LEFT_MARGIN + RIGHT_MARGIN; // 1392
-        const PDF_H = STAGE_H + TOP_MARGIN + BOTTOM_MARGIN; // 816
+                const LEFT_MARGIN = 56;
+                const RIGHT_MARGIN = 56;
+                const TOP_MARGIN = 48;
+                const BOTTOM_MARGIN = 48;
 
-        const pdf = new jsPDF({
-            orientation: 'landscape',
-            unit: 'px',
-            format: [PDF_W, PDF_H]
-        });
+                const STAGE_W = 1280;
+                const STAGE_H = 720;
 
-        const realStage = document.getElementById("stage");
-        const originalHTML = realStage.querySelector("#currentSlide").innerHTML;
+                const PDF_W = STAGE_W + LEFT_MARGIN + RIGHT_MARGIN; // 1392
+                const PDF_H = STAGE_H + TOP_MARGIN + BOTTOM_MARGIN; // 816
 
-        for (let i = 0; i < slides.length; i++) {
-            // 只替换 currentSlide 内容，不破坏 stage 本体
-            realStage.querySelector("#currentSlide").innerHTML = slides[i];
-            // 渲染公式与代码高亮后再截图
-            renderKaTeX();
-            await new Promise(r => setTimeout(r, 120));
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'px',
+                    format: [PDF_W, PDF_H]
+                });
 
-            // 克隆整个 stage（包含其 class 与样式）
-            const cloneStage = realStage.cloneNode(true);
+                const realStage = document.getElementById("stage");
+                const originalHTML = realStage.querySelector("#currentSlide").innerHTML;
 
-            // 移除 translate 等影响位置的 transform，但保留其他样式 (如果你确实想保留 scale 可改这里)
-            // 你可以把 "none" 改为保留 scale 的方式，这里保持之前你确定好的行为
-            cloneStage.style.transform = "none";
-            cloneStage.style.left = "0";
-            cloneStage.style.top = "0";
-            cloneStage.style.position = "relative";
-            cloneStage.style.width = STAGE_W + "px";
-            cloneStage.style.height = STAGE_H + "px";
+                for (let i = 0; i < slides.length; i++) {
+                    // 只替换 currentSlide 内容，不破坏 stage 本体
+                    realStage.querySelector("#currentSlide").innerHTML = slides[i];
+                    // 渲染公式与代码高亮后再截图
+                    renderKaTeX();
+                    await new Promise(r => setTimeout(r, 120));
 
-            // 创建容器（包含精确留白）
-            const container = document.createElement("div");
-            container.style.position = "fixed";
-            container.style.left = "-99999px";
-            container.style.top = "0";
-            container.style.width = PDF_W + "px";
-            container.style.height = PDF_H + "px";
-            container.style.background = "white";
-            container.style.overflow = "hidden";
-            container.style.padding = `${TOP_MARGIN}px ${RIGHT_MARGIN}px ${BOTTOM_MARGIN}px ${LEFT_MARGIN}px`;
+                    // 克隆整个 stage（包含其 class 与样式）
+                    const cloneStage = realStage.cloneNode(true);
 
-            container.appendChild(cloneStage);
-            document.body.appendChild(container);
+                    // 移除 translate 等影响位置的 transform，但保留其他样式 (如果你确实想保留 scale 可改这里)
+                    // 你可以把 "none" 改为保留 scale 的方式，这里保持之前你确定好的行为
+                    cloneStage.style.transform = "none";
+                    cloneStage.style.left = "0";
+                    cloneStage.style.top = "0";
+                    cloneStage.style.position = "relative";
+                    cloneStage.style.width = STAGE_W + "px";
+                    cloneStage.style.height = STAGE_H + "px";
 
-            // 截图（高清）
-            const canvas = await html2canvas(container, {
-                useCORS: true,
-                backgroundColor: "#fff",
-                scale: 3
-            });
+                    // 创建容器（包含精确留白）
+                    const container = document.createElement("div");
+                    container.style.position = "fixed";
+                    container.style.left = "-99999px";
+                    container.style.top = "0";
+                    container.style.width = PDF_W + "px";
+                    container.style.height = PDF_H + "px";
+                    container.style.background = "white";
+                    container.style.overflow = "hidden";
+                    container.style.padding = `${TOP_MARGIN}px ${RIGHT_MARGIN}px ${BOTTOM_MARGIN}px ${LEFT_MARGIN}px`;
 
-            // 把图片插入 PDF（缩放到 PDF 尺寸）
-            const imgData = canvas.toDataURL("image/jpeg", 0.98);
-            if (i > 0) pdf.addPage([PDF_W, PDF_H], "landscape");
-            pdf.addImage(imgData, "JPEG", 0, 0, PDF_W, PDF_H);
+                    container.appendChild(cloneStage);
+                    document.body.appendChild(container);
 
-            // ====== 在 PDF 上添加可点链接 ======
-            // 计算 container 在页面上的 clientRect（克隆在页面上，所以有真实的 rect）
-            const containerRect = container.getBoundingClientRect();
-            // 获取所有链接（相对于 cloneStage 的链接），包括包裹图片的链接
-            const anchors = cloneStage.querySelectorAll('a[href]');
-            anchors.forEach(a => {
-                try {
-                    const href = a.getAttribute('href');
-                    if (!href) return;
-                    // 跳过 javascript: 或 空锚
-                    if (/^\s*(javascript:|#)/i.test(href)) return;
+                    // 截图（高清）
+                    const canvas = await html2canvas(container, {
+                        useCORS: true,
+                        backgroundColor: "#fff",
+                        scale: 3
+                    });
 
-                    // 如果链接内包含图片，使用图片的尺寸；否则使用链接本身的尺寸
-                    const img = a.querySelector('img');
-                    let rect;
-                    if (img) {
-                        // 图片链接：使用图片的边界框
-                        rect = img.getBoundingClientRect();
-                    } else {
-                        // 普通链接：使用链接的边界框
-                        rect = a.getBoundingClientRect();
-                    }
+                    // 把图片插入 PDF（缩放到 PDF 尺寸）
+                    const imgData = canvas.toDataURL("image/jpeg", 0.98);
+                    if (i > 0) pdf.addPage([PDF_W, PDF_H], "landscape");
+                    pdf.addImage(imgData, "JPEG", 0, 0, PDF_W, PDF_H);
 
-                    // 计算相对于 container 的位置（CSS 像素）
-                    const relLeft = rect.left - containerRect.left;
-                    const relTop = rect.top - containerRect.top;
-                    const relW = rect.width;
-                    const relH = rect.height;
+                    // ====== 在 PDF 上添加可点链接 ======
+                    // 计算 container 在页面上的 clientRect（克隆在页面上，所以有真实的 rect）
+                    const containerRect = container.getBoundingClientRect();
+                    // 获取所有链接（相对于 cloneStage 的链接），包括包裹图片的链接
+                    const anchors = cloneStage.querySelectorAll('a[href]');
+                    anchors.forEach(a => {
+                        try {
+                            const href = a.getAttribute('href');
+                            if (!href) return;
+                            // 跳过 javascript: 或 空锚
+                            if (/^\s*(javascript:|#)/i.test(href)) return;
 
-                    // 将 CSS 像素映射到 PDF 像素（因为我们把 canvas 渲染为 PDF_W x PDF_H）
-                    const pdfX = (relLeft / containerRect.width) * PDF_W;
-                    const pdfY = (relTop / containerRect.height) * PDF_H;
-                    const pdfW = (relW / containerRect.width) * PDF_W;
-                    const pdfH = (relH / containerRect.height) * PDF_H;
+                            // 如果链接内包含图片，使用图片的尺寸；否则使用链接本身的尺寸
+                            const img = a.querySelector('img');
+                            let rect;
+                            if (img) {
+                                // 图片链接：使用图片的边界框
+                                rect = img.getBoundingClientRect();
+                            } else {
+                                // 普通链接：使用链接的边界框
+                                rect = a.getBoundingClientRect();
+                            }
 
-                    // jsPDF 的链接 API：link(x, y, w, h, { url: '...' })
-                    pdf.link(pdfX, pdfY, pdfW, pdfH, { url: href });
-                } catch (e) {
-                    // 单个链接解析失败不影响整体
-                    console.warn('add link failed', e);
+                            // 计算相对于 container 的位置（CSS 像素）
+                            const relLeft = rect.left - containerRect.left;
+                            const relTop = rect.top - containerRect.top;
+                            const relW = rect.width;
+                            const relH = rect.height;
+
+                            // 将 CSS 像素映射到 PDF 像素（因为我们把 canvas 渲染为 PDF_W x PDF_H）
+                            const pdfX = (relLeft / containerRect.width) * PDF_W;
+                            const pdfY = (relTop / containerRect.height) * PDF_H;
+                            const pdfW = (relW / containerRect.width) * PDF_W;
+                            const pdfH = (relH / containerRect.height) * PDF_H;
+
+                            // jsPDF 的链接 API：link(x, y, w, h, { url: '...' })
+                            pdf.link(pdfX, pdfY, pdfW, pdfH, { url: href });
+                        } catch (e) {
+                            // 单个链接解析失败不影响整体
+                            console.warn('add link failed', e);
+                        }
+                    });
+                    // ====== end add links ======
+
+                    container.remove();
                 }
-            });
-            // ====== end add links ======
 
-            container.remove();
-        }
+                // 恢复原始当前幻灯片内容
+                realStage.querySelector("#currentSlide").innerHTML = originalHTML;
 
-        // 恢复原始当前幻灯片内容
-        realStage.querySelector("#currentSlide").innerHTML = originalHTML;
-
-        // 触发下载
-        pdf.save("slides.pdf");
-        compileAndRender()
-    });
+                // 触发下载
+                pdf.save("slides.pdf");
+                compileAndRender();
+            } catch (err) {
+                console.error('导出 PDF 失败', err);
+            } finally {
+                // 恢复按钮状态
+                btn.disabled = false;
+                btn.textContent = originalText;
+                exportingPdf = false;
+            }
+        });
+    }
 
 
 
