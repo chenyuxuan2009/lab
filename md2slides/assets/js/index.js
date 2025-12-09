@@ -232,8 +232,30 @@ print(a + b)
     setTheme(initialTheme);
     dom.themeSelect.value = initialTheme;
 
-    // Fill sample by default
-    dom.markdown.value = SAMPLE;
+    // 自动保存功能：从 localStorage 恢复内容
+    const savedContent = localStorage.getItem('m2s-markdown-content');
+    if (savedContent) {
+        dom.markdown.value = savedContent;
+    } else {
+        // Fill sample by default
+        dom.markdown.value = SAMPLE;
+    }
+
+    // 自动保存功能：每10秒保存一次到 localStorage
+    setInterval(() => {
+        const content = dom.markdown.value;
+        if (content && content.trim().length > 0) {
+            localStorage.setItem('m2s-markdown-content', content);
+        }
+    }, 10000); // 10秒
+
+    // 页面卸载时也保存一次
+    window.addEventListener('beforeunload', () => {
+        const content = dom.markdown.value;
+        if (content && content.trim().length > 0) {
+            localStorage.setItem('m2s-markdown-content', content);
+        }
+    });
 
     // Render initial
     compileAndRender();

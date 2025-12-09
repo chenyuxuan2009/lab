@@ -53,7 +53,7 @@
 }
 
 [data-theme="dark"] .katex-display {
-    background: rgba(255, 255, 255, 0.05);
+    background: transparent;
     border-radius: 8px;
     padding: 0.8em;
 }
@@ -133,6 +133,8 @@ body {
 select.control-input,
 button.control-btn {
     appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     background: var(--surface);
     border: 1px solid var(--outline);
     color: var(--text);
@@ -140,6 +142,29 @@ button.control-btn {
     border-radius: 10px;
     font-size: 14px;
     cursor: pointer;
+}
+
+/* 确保选择框的圆角生效 */
+select.control-input {
+    border-radius: 10px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+/* 下拉菜单选项的样式（部分浏览器支持） */
+select.control-input option {
+    border-radius: 10px;
+    padding: 8px 12px;
+    background: var(--surface);
+    color: var(--text);
+}
+
+/* 下拉菜单容器的样式（部分浏览器支持） */
+select.control-input::-ms-expand {
+    display: none;
+    /* 隐藏 IE/Edge 的默认下拉箭头 */
 }
 
 button.control-btn.primary {
@@ -739,7 +764,7 @@ textarea#markdownInput {
 }
 
 [data-theme="dark"] .katex-display-wrapper {
-    background: rgba(255, 255, 255, 0.05);
+    background: transparent;
     border-radius: 8px;
     padding: 0.8em;
 }
