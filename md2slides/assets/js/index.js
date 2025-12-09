@@ -369,9 +369,37 @@ print(a + b)
         const textY = mouseY + scrollTop - paddingTop - borderTop;
         const lineNumber = Math.max(0, Math.floor(textY / lineHeight));
 
-        // 找到对应的幻灯片
+        // 获取文本内容，检查点击的行是否是分隔符
+        const lines = dom.markdown.value.replace(/\r/g, '').split('\n');
+        const clickedLine = lines[lineNumber] || '';
+
+        // 如果点击的是分隔符行（---），跳转到分隔符后的幻灯片
+        if (clickedLine.trim() === '---') {
+            // 找到分隔符后的第一个幻灯片
+            for (let i = 0; i < slideLineRanges.length; i++) {
+                const range = slideLineRanges[i];
+                if (range.start > lineNumber) {
+                    // 返回该基础幻灯片的最后一页渐进式幻灯片索引
+                    if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
+                        return range.progressiveStartIndex + range.progressiveCount - 1;
+                    }
+                    return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
+                }
+            }
+            // 如果分隔符在最后，返回最后一个幻灯片
+            if (slideLineRanges.length > 0) {
+                const lastRange = slideLineRanges[slideLineRanges.length - 1];
+                if (lastRange.progressiveStartIndex !== undefined && lastRange.progressiveCount !== undefined) {
+                    return lastRange.progressiveStartIndex + lastRange.progressiveCount - 1;
+                }
+                return lastRange.progressiveStartIndex !== undefined ? lastRange.progressiveStartIndex : 0;
+            }
+        }
+
+        // 找到对应的幻灯片（精确匹配）
         for (let i = 0; i < slideLineRanges.length; i++) {
             const range = slideLineRanges[i];
+            // 精确匹配：行号必须在范围内
             if (lineNumber >= range.start && lineNumber <= range.end) {
                 // 返回该基础幻灯片的最后一页渐进式幻灯片索引（显示最完整）
                 if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
@@ -381,8 +409,34 @@ print(a + b)
             }
         }
 
+        // 如果点击的行不在任何幻灯片的范围内，找到它应该属于的幻灯片
+        // 遍历所有幻灯片，找到点击行应该属于的幻灯片
+        for (let i = 0; i < slideLineRanges.length; i++) {
+            const range = slideLineRanges[i];
+            const nextRange = slideLineRanges[i + 1];
+
+            // 如果点击的行在当前幻灯片的结束行之后
+            if (lineNumber > range.end) {
+                // 如果有下一个幻灯片，且点击的行在下一个幻灯片的起始行之前，属于当前幻灯片
+                if (nextRange && lineNumber < nextRange.start) {
+                    // 返回当前幻灯片的最后一页（空行和分隔符属于前面的幻灯片）
+                    if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
+                        return range.progressiveStartIndex + range.progressiveCount - 1;
+                    }
+                    return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
+                }
+                // 如果没有下一个幻灯片，且点击的行在最后一个幻灯片的结束行之后，属于最后一个幻灯片
+                if (!nextRange) {
+                    if (range.progressiveStartIndex !== undefined && range.progressiveCount !== undefined) {
+                        return range.progressiveStartIndex + range.progressiveCount - 1;
+                    }
+                    return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
+                }
+            }
+        }
+
         // 如果鼠标在第一个幻灯片之前，返回第一个幻灯片的最后一页
-        if (lineNumber < slideLineRanges[0].start && slideLineRanges.length > 0) {
+        if (slideLineRanges.length > 0 && lineNumber < slideLineRanges[0].start) {
             const firstRange = slideLineRanges[0];
             if (firstRange.progressiveStartIndex !== undefined && firstRange.progressiveCount !== undefined) {
                 return firstRange.progressiveStartIndex + firstRange.progressiveCount - 1;
@@ -859,10 +913,21 @@ print(a + b)
 
             // 如果遇到分隔符且不在代码块中，开始新的幻灯片
             if (!inCode && line.trim() === '---' && i > slideStartLine) {
+                // 找到当前幻灯片的实际结束行（跳过末尾的空行）
+                let actualEndLine = i - 1;
+                while (actualEndLine >= slideStartLine && lines[actualEndLine].trim() === '') {
+                    actualEndLine--;
+                }
+
+                // 如果实际结束行小于起始行，说明只有空行，使用起始行作为结束行
+                if (actualEndLine < slideStartLine) {
+                    actualEndLine = slideStartLine;
+                }
+
                 // 保存当前幻灯片的行范围
                 slideLineRanges.push({
                     start: slideStartLine,
-                    end: i - 1, // 不包括分隔符本身
+                    end: actualEndLine,
                     slideIndex: slideIndex++
                 });
                 slideStartLine = i + 1; // 下一个幻灯片从分隔符的下一行开始
@@ -871,9 +936,20 @@ print(a + b)
 
         // 添加最后一个幻灯片
         if (slideStartLine < lines.length) {
+            // 找到最后一个幻灯片的实际结束行（跳过末尾的空行）
+            let actualEndLine = lines.length - 1;
+            while (actualEndLine >= slideStartLine && lines[actualEndLine].trim() === '') {
+                actualEndLine--;
+            }
+
+            // 如果实际结束行小于起始行，说明只有空行，使用起始行作为结束行
+            if (actualEndLine < slideStartLine) {
+                actualEndLine = slideStartLine;
+            }
+
             slideLineRanges.push({
                 start: slideStartLine,
-                end: lines.length - 1,
+                end: actualEndLine,
                 slideIndex: slideIndex
             });
         }
