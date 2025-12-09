@@ -377,6 +377,11 @@ textarea#markdownInput {
     padding: 10px 14px;
     border-radius: 10px;
     margin: 8px 0 10px;
+    /* 让引用块根据内容自适应大小，不限制内容显示 */
+    overflow: visible;
+    min-height: auto;
+    /* 设置字体大小与段落一致，确保公式大小正确 */
+    font-size: 22px;
 }
 
 /* Markdown 表格样式 */
@@ -499,6 +504,17 @@ textarea#markdownInput {
 
 .slide .admonition>:last-child {
     margin-bottom: 0 !important;
+}
+
+/* Mermaid 图表 */
+.slide .mermaid,
+.slide .mermaid-render {
+    width: 100%;
+}
+
+.slide .mermaid-render svg {
+    width: 100%;
+    height: auto;
 }
 
 .slide .subtitle {

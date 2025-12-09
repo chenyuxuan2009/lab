@@ -30,14 +30,17 @@ SOFTWARE.
   <meta name="description"
     content="Convert Markdown (--- as slide breaks) into a presentation deck with live preview, fullscreen, keyboard navigation, and theme toggle." />
   <link rel="stylesheet" href="assets/css/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
+  <!-- 使用 Cloudflare CDN 镜像，提高中国境内访问稳定性 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"
+    crossorigin="anonymous">
   <!-- 添加 Highlight.js CSS 和 JS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
     id="highlightLightTheme">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
     id="highlightDarkTheme" disabled>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- 使用 mermaid 9.x 更稳，避免 createElementNS 报错 - 使用 Cloudflare CDN 镜像 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.4.3/mermaid.min.js"></script>
   <link rel="icon" href="assets/img/favicon.ico">
 </head>
 
@@ -114,14 +117,14 @@ SOFTWARE.
     </main>
   </div>
   <script src="assets/js/index.js"></script>
-  <!-- html2canvas -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <!-- katex -->
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  <!-- html2canvas - 使用 Cloudflare CDN 镜像 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- katex - 使用 Cloudflare CDN 镜像，提高中国境内访问稳定性 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
     crossorigin="anonymous"></script>
-  <!-- jsPDF umd -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <!-- jsPDF umd - 使用 Cloudflare CDN 镜像 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </body>
 

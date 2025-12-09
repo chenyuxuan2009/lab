@@ -191,6 +191,9 @@
                 hljs.highlightElement(block);
             });
         }
+
+        // 渲染 Mermaid
+        renderMermaid();
     }
 
     function splitSlides(text) {
@@ -219,18 +222,25 @@
 
         let text = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-        // 1. 先提取 LaTeX 公式块（$$...$$ 和 \[...\]）
+        // 1. 先提取 LaTeX 公式块（$$...$$ 和 \[...\]），若有 blockquote 前缀，去掉前缀后存储
         const latexBlocks = [];
-        text = text.replace(/\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$/g, (match) => {
+        text = text.replace(/(^|\n)(&gt;\s*)?(\\\[[\s\S]*?\\\]|\$\$[\s\S]*?\$\$)/g, (_, lead, quote, body) => {
             const i = latexBlocks.length;
-            latexBlocks.push(match);
-            return `\uE001LATEXBLOCK${i}\uE001`;
+            const cleaned = body.replace(/(^|\n)&gt;\s?/g, '$1');
+            latexBlocks.push(cleaned);
+            const placeholder = `\uE001LATEXBLOCK${i}\uE001`;
+            return `${lead || ''}${quote || ''}${placeholder}`;
         });
 
-        // 2. 提取 fenced code blocks
+        // 2. 提取 fenced code blocks（含 mermaid）
         const codeBlocks = [];
         text = text.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (m, lang, code) => {
             const i = codeBlocks.length;
+            const lower = (lang || '').toLowerCase();
+            if (lower === 'mermaid') {
+                codeBlocks.push(`<div class="mermaid">${code}</div>`);
+                return `\uE000CODEBLOCK${i}\uE000`;
+            }
             const langClass = lang ? ` class="language-${escapeHtmlAttr(lang)}"` : '';
             codeBlocks.push(`<pre class="code"><code${langClass}>${escapeHtml(code)}</code></pre>`);
             return `\uE000CODEBLOCK${i}\uE000`;
@@ -302,9 +312,18 @@
         for (let i = 0; i < lines.length; i++) {
             const raw = lines[i];
             const line = raw; // already escaped
-            // 跳过 LaTeX 公式块占位符的处理
+            // LaTeX 占位符：区分是否在 blockquote 中
+            const latexBq = /^&gt;\s*(\uE001LATEXBLOCK\d+\uE001)\s*$/.exec(line);
+            if (latexBq) {
+                flushPara(); closeLists();
+                while (bqDepth < 1) { out += '<blockquote>'; bqDepth++; }
+                while (bqDepth > 1) { out += '</blockquote>'; bqDepth--; }
+                // 直接输出占位符，不要包在 <p> 标签里，让公式占据整个引用块
+                out += latexBq[1] + '\n';
+                continue;
+            }
             if (line.includes('\uE001LATEXBLOCK')) {
-                if (para) flushPara();
+                flushPara();
                 closeLists();
                 closeQuote();
                 out += line + '\n';
@@ -419,6 +438,43 @@
     }
     function alignAttr(align) {
         return align ? ` align="${align}"` : '';
+    }
+
+    // Mermaid 渲染
+    let mermaidInited = false;
+    let mermaidLoading = false;
+    function renderMermaid() {
+        if (typeof mermaid === 'undefined') {
+            if (mermaidLoading) return;
+            mermaidLoading = true;
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.4.3/mermaid.min.js';
+            s.onload = () => { mermaidLoading = false; renderMermaid(); };
+            s.onerror = () => { mermaidLoading = false; console.warn('mermaid load failed'); };
+            document.head.appendChild(s);
+            return;
+        }
+        const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+        if (!mermaidInited) {
+            mermaid.initialize({ startOnLoad: false, theme });
+            mermaidInited = true;
+        } else {
+            mermaid.initialize({ startOnLoad: false, theme });
+        }
+        const blocks = dom.currentSlide.querySelectorAll('.mermaid');
+        blocks.forEach((el, idx) => {
+            const code = (el.textContent || '').trim();
+            const id = `mmd-${Date.now()}-${idx}`;
+            const container = document.createElement('div');
+            container.className = 'mermaid-render';
+            el.replaceWith(container);
+            try {
+                mermaid.render(id, code, (svg) => { container.innerHTML = svg; });
+            } catch (e) {
+                console.warn('mermaid render failed', e);
+                container.innerHTML = `<pre class="code"><code>${escapeHtml(code)}</code></pre>`;
+            }
+        });
     }
 
     // 将 > [!TYPE] ... 转换为提示块占位符
