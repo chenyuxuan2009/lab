@@ -427,13 +427,47 @@ print(a + b)
         return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
     }
 
-    // 监听 textarea 的点击事件（聚焦时跳转）
-    dom.markdown.addEventListener('click', (e) => {
-        const targetSlideIndex = getSlideIndexFromMousePosition(e);
-        if (targetSlideIndex >= 0 && targetSlideIndex !== index) {
+    // 基于光标位置跳转到对应幻灯片
+    function gotoSlideByCaret() {
+        if (!dom.markdown || !slideLineRanges.length) return;
+        const text = dom.markdown.value.replace(/\r/g, '');
+        const caret = dom.markdown.selectionStart ?? 0;
+        // 计算光标所在行号
+        const before = text.slice(0, caret);
+        const lineNumber = before.split('\n').length - 1;
+        // 计算基础幻灯片索引：统计光标行之前（不含当前行）的分隔符数量（排除代码块内）
+        const lines = text.split('\n');
+        let baseSlideIndex = 0;
+        let inCode = false;
+        for (let i = 0; i < lines.length && i < lineNumber; i++) {
+            const ln = lines[i];
+            if (/^```/.test(ln.trim())) inCode = !inCode;
+            if (!inCode && ln.trim() === '---') {
+                baseSlideIndex++;
+            }
+        }
+        // 若当前行本身是分隔符，则归属于分隔符之后
+        if (lines[lineNumber] && lines[lineNumber].trim() === '---') {
+            baseSlideIndex++;
+        }
+        // 边界保护
+        if (baseSlideIndex < 0) baseSlideIndex = 0;
+        if (baseSlideIndex >= slideLineRanges.length) baseSlideIndex = slideLineRanges.length - 1;
+
+        const range = slideLineRanges[baseSlideIndex];
+        if (!range) return;
+
+        const targetSlideIndex = (range.progressiveStartIndex ?? 0) + (range.progressiveCount ? range.progressiveCount - 1 : 0);
+        if (targetSlideIndex !== index) {
             gotoSlide(targetSlideIndex);
         }
-    });
+    }
+
+    // 监听 textarea 的点击和键盘事件（上下键、光标移动）
+    dom.markdown.addEventListener('click', () => gotoSlideByCaret());
+    dom.markdown.addEventListener('keyup', () => gotoSlideByCaret());
+    // 输入时也可能改变光标位置
+    dom.markdown.addEventListener('input', () => gotoSlideByCaret());
 
     // 在 setTheme 函数中添加代码高亮主题切换
     function setTheme(theme) {
