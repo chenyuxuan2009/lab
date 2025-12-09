@@ -18,6 +18,7 @@
         prev: $('#prevBtn'),
         next: $('#nextBtn'),
         fullscreenTop: $('#fullscreenTop'),
+        saveContent: $('#saveContent'),
         stageWrapper: document.querySelector('.stage-wrapper'),
     };
 
@@ -267,6 +268,25 @@ print(a + b)
 
     dom.themeSelect.addEventListener('change', (e) => setTheme(e.target.value));
     $('#loadSample').addEventListener('click', () => { dom.markdown.value = SAMPLE; compileAndRender(true); });
+
+    // 保存按钮功能
+    if (dom.saveContent) {
+        dom.saveContent.addEventListener('click', () => {
+            const content = dom.markdown.value;
+            if (content && content.trim().length > 0) {
+                localStorage.setItem('m2s-markdown-content', content);
+                // 视觉反馈：临时改变按钮文本
+                const originalText = dom.saveContent.textContent;
+                dom.saveContent.textContent = 'Saved!';
+                dom.saveContent.style.opacity = '0.7';
+                setTimeout(() => {
+                    dom.saveContent.textContent = originalText;
+                    dom.saveContent.style.opacity = '1';
+                }, 1000);
+            }
+        });
+    }
+
     dom.fullscreenTop.addEventListener('click', toggleFullscreen);
 
     dom.prev.addEventListener('click', prevSlide);
