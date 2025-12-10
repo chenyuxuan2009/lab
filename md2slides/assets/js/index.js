@@ -27,7 +27,7 @@
     const SAMPLE = `# Markdown → Slides
 
 灵感来源于：<https://github.com/openai/gpt-5-coding-examples/tree/main/apps/markdown-to-slides>
-    
+
 后由 [cyx](https://cyx2009.top/) 进行部分优化。
 
 另外，如果你不希望自动分页，可以在上方选择成 Manual 模式，然后手动插入 \`\\pause\` 来分割动画。
@@ -1308,6 +1308,7 @@ print(a + b)
             }
         };
 
+        let blankLineCount = 0; // 跟踪连续空行的数量
         for (let i = 0; i < lines.length; i++) {
             const raw = lines[i];
             const line = raw; // already escaped
@@ -1319,6 +1320,7 @@ print(a + b)
                 while (bqDepth > 1) { out += '</blockquote>'; bqDepth--; }
                 // 直接输出占位符，不要包在 <p> 标签里，让公式占据整个引用块
                 out += latexBq[1] + '\n';
+                blankLineCount = 0;
                 continue;
             }
             if (line.includes('\uE001LATEXBLOCK')) {
@@ -1326,16 +1328,25 @@ print(a + b)
                 closeLists();
                 closeQuote();
                 out += line + '\n';
+                blankLineCount = 0;
                 continue;
             }
             if (!line.trim()) { // blank line
+                blankLineCount++;
+                // 空行关闭当前段落（第一个空行分隔段落）
                 flushPara();
                 // 空行关闭有序列表（有序列表遇到空行应该断开）
                 if (inOl) { out += '</ol>'; inOl = false; }
                 // 空行不关闭无序列表，让无序列表可以跨行继续
                 closeQuote();
-                continue;
+                // 逻辑：1个空行 = 换一行，2个空行 = 换一行（和1个一样），3个空行 = 换两行，4个空行 = 换两行（和3个一样），5个空行 = 换三行
+                // 公式：Math.ceil(blankLineCount / 2) 个 <br>
+                const brCount = Math.ceil(blankLineCount / 2);
+                for (let j = 0; j < brCount; j++) {
+                    out += '<br>';
+                }
             }
+            blankLineCount = 0; // 重置空行计数
 
             // Headings
             const h = /^(#{1,6})\s+(.*)$/.exec(line);
@@ -1467,6 +1478,13 @@ print(a + b)
         flushPara();
         closeLists();
         closeQuote();
+        // 如果最后有空行，也需要输出对应的 <br>
+        if (blankLineCount > 0) {
+            const brCount = Math.ceil(blankLineCount / 2);
+            for (let j = 0; j < brCount; j++) {
+                out += '<br>';
+            }
+        }
         return out;
     }
 
@@ -1801,6 +1819,18 @@ print(a + b)
                     renderKaTeX();
                     await new Promise(r => setTimeout(r, 120));
 
+                    // 等待所有图片加载完成
+                    const images = realStage.querySelectorAll('img');
+                    await Promise.all(Array.from(images).map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise((resolve, reject) => {
+                            img.onload = resolve;
+                            img.onerror = resolve; // 即使加载失败也继续
+                            // 设置超时，避免无限等待
+                            setTimeout(resolve, 5000);
+                        });
+                    }));
+
                     // 克隆整个 stage（包含其 class 与样式）
                     const cloneStage = realStage.cloneNode(true);
 
@@ -1827,11 +1857,27 @@ print(a + b)
                     container.appendChild(cloneStage);
                     document.body.appendChild(container);
 
+                    // 等待克隆后的图片也加载完成
+                    const cloneImages = cloneStage.querySelectorAll('img');
+                    await Promise.all(Array.from(cloneImages).map(img => {
+                        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                        return new Promise((resolve, reject) => {
+                            img.onload = resolve;
+                            img.onerror = resolve; // 即使加载失败也继续
+                            // 设置超时，避免无限等待
+                            setTimeout(resolve, 5000);
+                        });
+                    }));
+
                     // 截图（高清）
                     const canvas = await html2canvas(container, {
                         useCORS: true,
+                        allowTaint: false,
+                        logging: false,
                         backgroundColor: "#fff",
-                        scale: 3
+                        scale: 3,
+                        imageTimeout: 15000, // 增加图片加载超时时间
+                        removeContainer: true
                     });
 
                     // 把图片插入 PDF（缩放到 PDF 尺寸）
