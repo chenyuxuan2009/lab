@@ -5,6 +5,7 @@
     const dom = {
         body: document.body,
         themeSelect: $('#themeSelect'),
+        paginationMode: $('#paginationMode'),
         markdown: $('#markdownInput'),
         preview: $('#preview'),
         stage: $('#stage'),
@@ -28,6 +29,8 @@
 灵感来源于：<https://github.com/openai/gpt-5-coding-examples/tree/main/apps/markdown-to-slides>
     
 后由 [cyx](https://cyx2009.top/) 进行部分优化。
+
+另外，如果你不希望自动分页，可以在上方选择成 Manual 模式，然后手动插入 \`\\pause\` 来分割动画。
 
 ---
 
@@ -275,6 +278,7 @@ print(a + b)
     document.addEventListener('fullscreenchange', layoutStage);
 
     dom.themeSelect.addEventListener('change', (e) => setTheme(e.target.value));
+    dom.paginationMode.addEventListener('change', () => compileAndRender());
     $('#loadSample').addEventListener('click', () => { dom.markdown.value = SAMPLE; compileAndRender(true); });
 
     // 保存按钮功能
@@ -546,11 +550,122 @@ print(a + b)
         dom.deckTitle.textContent = h1 ? h1.textContent : 'Presentation';
     }
 
+    // 手动分页模式：根据 \pause 标记生成幻灯片
+    function generateManualPaginationSlides(tempDiv, pauseMarkers) {
+        const slides = [];
+
+        // 按照 DOM 顺序排序 pause 标记
+        const sortedPauseMarkers = Array.from(pauseMarkers).sort((a, b) => {
+            const pos = a.compareDocumentPosition(b);
+            if (pos & Node.DOCUMENT_POSITION_PRECEDING) return -1;
+            if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return 1;
+            return 0;
+        });
+
+        if (sortedPauseMarkers.length === 0) {
+            // 没有 pause 标记，返回单页
+            const slideDiv = tempDiv.cloneNode(true);
+            slideDiv.querySelectorAll('.pause-marker[data-pause="true"]').forEach(marker => marker.remove());
+            slides.push(slideDiv.innerHTML);
+            return slides;
+        }
+
+        // 为每个 pause 标记创建一个分页
+        sortedPauseMarkers.forEach((pauseMarker, idx) => {
+            const slideDiv = tempDiv.cloneNode(true);
+            const allMarkers = Array.from(slideDiv.querySelectorAll('.pause-marker[data-pause="true"]'));
+
+            // 找到当前对应的 pause 标记
+            const currentMarker = allMarkers[idx];
+            if (!currentMarker) return;
+
+            // 找到包含当前 pause 标记的块级元素（P, H1-H6, LI, BLOCKQUOTE 等）
+            let containerElement = currentMarker.parentElement;
+            while (containerElement && containerElement !== slideDiv) {
+                const tagName = containerElement.tagName;
+                if (['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'DIV', 'UL', 'OL', 'TABLE', 'TR', 'TD', 'TH', 'TBODY', 'THEAD'].includes(tagName)) {
+                    break;
+                }
+                containerElement = containerElement.parentElement;
+            }
+
+            if (!containerElement || containerElement === slideDiv) {
+                // 如果找不到合适的容器，就移除该 pause 标记之后的所有内容
+                let node = currentMarker;
+                while (node && node !== slideDiv) {
+                    let nextSibling = node.nextSibling;
+                    while (nextSibling) {
+                        const toRemove = nextSibling;
+                        nextSibling = nextSibling.nextSibling;
+                        toRemove.remove();
+                    }
+                    node = node.parentElement;
+                }
+                currentMarker.remove();
+            } else {
+                // 如果 pause 标记在元素内部，需要在该元素处分割
+
+                // 1. 移除该元素之后的所有兄弟元素
+                let nextSibling = containerElement.nextSibling;
+                while (nextSibling) {
+                    const toRemove = nextSibling;
+                    nextSibling = nextSibling.nextSibling;
+                    toRemove.remove();
+                }
+
+                // 2. 如果 pause 标记在元素内部，需要移除该元素中 pause 标记之后的内容
+                if (containerElement.contains(currentMarker)) {
+                    // 移除 pause 标记之后的所有内容（在同一元素内）
+                    let node = currentMarker.nextSibling;
+                    while (node && containerElement.contains(node)) {
+                        const toRemove = node;
+                        node = node.nextSibling;
+                        toRemove.remove();
+                    }
+                    // 移除 pause 标记本身
+                    currentMarker.remove();
+                } else {
+                    // pause 标记不在容器内，直接移除它
+                    currentMarker.remove();
+                }
+            }
+
+            // 移除所有剩余的 pause 标记（包括当前这个，如果还没移除的话）
+            slideDiv.querySelectorAll('.pause-marker[data-pause="true"]').forEach(marker => marker.remove());
+
+            slides.push(slideDiv.innerHTML);
+        });
+
+        // 添加最后一页（包含所有剩余内容，没有 pause 标记）
+        const lastSlideDiv = tempDiv.cloneNode(true);
+        // 移除所有 pause 标记
+        lastSlideDiv.querySelectorAll('.pause-marker[data-pause="true"]').forEach(marker => marker.remove());
+        slides.push(lastSlideDiv.innerHTML);
+
+        console.log(`手动模式：找到 ${sortedPauseMarkers.length} 个 \\pause 标记，生成了 ${slides.length} 页幻灯片`);
+        return slides;
+    }
+
     // 生成渐进式幻灯片（类似 PPT 动画效果）
     function generateProgressiveSlides(html) {
-        console.log('\n========== 开始生成渐进式幻灯片 ==========');
+        const paginationMode = dom.paginationMode ? dom.paginationMode.value : 'auto';
+        console.log(`\n========== 开始生成渐进式幻灯片 (模式: ${paginationMode}) ==========`);
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
+
+        // 如果是手动模式，检查是否有 \pause 标记
+        if (paginationMode === 'manual') {
+            const pauseMarkers = tempDiv.querySelectorAll('.pause-marker[data-pause="true"]');
+            if (pauseMarkers.length === 0) {
+                // 没有 \pause 标记，返回原始幻灯片（不分页）
+                console.log('手动模式：未找到 \\pause 标记，返回单页幻灯片');
+                return [html];
+            }
+            console.log(`手动模式：找到 ${pauseMarkers.length} 个 \\pause 标记`);
+            return generateManualPaginationSlides(tempDiv, pauseMarkers);
+        }
+
+        // 自动模式：保持原有逻辑
 
         // 查找所有可渐进显示的元素，按照它们在 DOM 中的顺序处理
         const progressiveElements = [];
@@ -1070,7 +1185,26 @@ print(a + b)
             return `\uE000CODEBLOCK${i}\uE000`;
         });
 
-        // 3. 现在转义文本（LaTeX 块和代码块已经被占位符替换，不会被转义）
+        // 2.3. 提取行内代码块 `...` - 在提取 \pause 之前，避免匹配代码内的 \pause
+        const inlineCodeBlocks = [];
+        text = text.replace(/`([^`\n]+?)`/g, (m, code) => {
+            const i = inlineCodeBlocks.length;
+            inlineCodeBlocks.push(code);
+            return `\uE009INLINECODE${i}\uE009`;
+        });
+
+        // 2.5. 提取 \pause 标记（在转义之前，但要在代码块、LaTeX 块和行内代码之后，避免匹配代码块内的内容）
+        // \pause 可以出现在行首、行尾或行中，需要保留上下文
+        // 注意：代码块、LaTeX 块和行内代码已经被占位符替换，占位符中包含特殊字符，不会被匹配
+        const pauseMarkers = [];
+        // 使用正则表达式，确保不会匹配到任何占位符（代码块、LaTeX 块、行内代码）
+        text = text.replace(/([^\uE000\uE001\uE009]*?)\\pause([^\uE000\uE001\uE009]*?)/g, (match, before, after) => {
+            const i = pauseMarkers.length;
+            pauseMarkers.push({ before, after });
+            return `${before}\uE007PAUSE${i}\uE007${after}`;
+        });
+
+        // 3. 现在转义文本（LaTeX 块、代码块和 pause 标记已经被占位符替换，不会被转义）
         text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         // 3. 处理提示块（> [!NOTE] 这类）
         let admonitions = [];
@@ -1078,6 +1212,13 @@ print(a + b)
 
         // 4. 块级转换
         text = blockify(text);
+
+        // 4.5. 恢复行内代码块（在 inlineify 之前，因为 inlineify 会处理其他内联格式）
+        text = text.replace(/\uE009INLINECODE(\d+)\uE009/g, (_, i) => {
+            const code = inlineCodeBlocks[Number(i)];
+            if (!code) return '';
+            return `<code>${escapeHtml(code)}</code>`;
+        });
 
         // 5. 内联转换
         text = inlineify(text);
@@ -1115,6 +1256,18 @@ print(a + b)
         });
         // 8. 恢复提示块
         text = text.replace(/\uE003ADMON(\d+)\uE003/g, (_, i) => admonitions[Number(i)] || '');
+
+        // 9. 恢复 \pause 标记，转换为特殊 HTML 元素
+        // 注意：此时 text 已经经过了 blockify 和 inlineify 处理，所以占位符中的内容已经是处理后的 HTML
+        // 但是 marker.before 和 marker.after 是原始文本，需要确保它们已经被正确处理
+        text = text.replace(/\uE007PAUSE(\d+)\uE007/g, (_, i) => {
+            const marker = pauseMarkers[Number(i)];
+            if (!marker) return '';
+            // marker.before 和 marker.after 在提取时是原始文本，但此时 text 已经经过了处理
+            // 所以占位符位置的内容应该已经被正确处理了
+            // 直接插入 pause 标记即可
+            return `<span class="pause-marker" data-pause="true"></span>`;
+        });
 
         return text;
     }
@@ -1473,13 +1626,28 @@ print(a + b)
         // 3. 提取单独的链接 [text](href "title")，并在提取时处理链接文本内的内联格式
         s = s.replace(/\[([^\]]+)\]\(([^\s\)]+)(?:\s+"([^"]+)")?\)/g, (m, txt, href, title) => {
             // 先处理链接文本内的内联格式
-            let processedTxt = txt;
-            // Bold **text** or __text__
-            processedTxt = processedTxt.replace(/(\*\*|__)(.+?)\1/g, '<strong>$2</strong>');
-            // Italic *text* or _text_
-            processedTxt = processedTxt.replace(/(\*|_)([^*_]+?)\1/g, '<em>$2</em>');
-            // Strikethrough ~~text~~
-            processedTxt = processedTxt.replace(/~~(.+?)~~/g, '<del>$1</del>');
+            // 使用递归函数处理嵌套格式
+            const processNestedFormat = (text) => {
+                // 先处理最外层的 Bold **text** or __text__
+                let result = text.replace(/(\*\*|__)(.+?)\1/g, (match, marker, content) => {
+                    return `<strong>${processNestedFormat(content)}</strong>`;
+                });
+                // 然后处理 Strikethrough ~~text~~
+                result = result.replace(/~~(.+?)~~/g, (match, content) => {
+                    return `<del>${processNestedFormat(content)}</del>`;
+                });
+                // 最后处理 Italic *text* or _text_（只处理不在 HTML 标签内的）
+                result = result.replace(/(\*|_)([^*_\s<>]+?)\1/g, (match, marker, content) => {
+                    // 简单检查：如果内容包含 HTML 标签，跳过（可能已经被处理过了）
+                    if (content.includes('<') || content.includes('>')) {
+                        return match;
+                    }
+                    return `<em>${content}</em>`;
+                });
+                return result;
+            };
+
+            const processedTxt = processNestedFormat(txt);
 
             const i = linkPlaceholders.length;
             linkPlaceholders.push({ txt: processedTxt, href, title });
@@ -1548,7 +1716,14 @@ print(a + b)
             return m;
         });
 
-        s = s.replace(/`([^`]+?)`/g, (m, code) => `<code>${escapeHtml(code)}</code>`);
+        // 处理行内代码 `...`（只处理未恢复的，已恢复的 HTML 代码不会被匹配）
+        s = s.replace(/`([^`<>]+?)`/g, (m, code) => {
+            // 如果内容包含 HTML 标签，说明已经被处理过了，跳过
+            if (code.includes('<') || code.includes('>')) {
+                return m;
+            }
+            return `<code>${escapeHtml(code)}</code>`;
+        });
 
         // 恢复行内公式占位符
         s = s.replace(/\uE002MATH(\d+)\uE002/g, (_, i) => `$${mathSpans[Number(i)]}$`);
