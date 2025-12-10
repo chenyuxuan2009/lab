@@ -27,7 +27,7 @@
     const SAMPLE = `# Markdown → Slides
 
 灵感来源于：<https://github.com/openai/gpt-5-coding-examples/tree/main/apps/markdown-to-slides>
-    
+
 后由 [cyx](https://cyx2009.top/) 进行部分优化。
 
 另外，如果你不希望自动分页，可以在上方选择成 Manual 模式，然后手动插入 \`\\pause\` 来分割动画。
@@ -138,15 +138,17 @@ stateDiagram
 >
 > 这是建议
 
+---
+
 > [!IMPORTANT]
 >
 > 这是重要
 
----
-
 > [!WARNING]
 >
 > 这是警告
+
+---
 
 > [!CAUTION]
 >
@@ -357,7 +359,12 @@ print(a + b)
     let timer = null;
     dom.markdown.addEventListener('input', () => {
         window.clearTimeout(timer);
-        timer = window.setTimeout(() => compileAndRender(), 180);
+        timer = window.setTimeout(() => {
+            // 重新编译幻灯片
+            compileAndRender();
+            // 根据当前光标位置重新对齐到对应基础幻灯片的最后一个渐进步骤
+            gotoSlideByCaret();
+        }, 180);
     });
 
     // 根据鼠标位置跳转到对应幻灯片
@@ -433,7 +440,21 @@ print(a + b)
         return range.progressiveStartIndex !== undefined ? range.progressiveStartIndex : 0;
     }
 
-    // 基于光标位置跳转到对应幻灯片
+    // 基于当前渐进式索引反推所属的基础幻灯片索引
+    function getBaseSlideIndexBySlideIndex(slideIdx) {
+        if (!slideLineRanges || !slideLineRanges.length) return -1;
+        for (let i = 0; i < slideLineRanges.length; i++) {
+            const r = slideLineRanges[i];
+            if (r.progressiveStartIndex == null) continue;
+            const start = r.progressiveStartIndex;
+            const count = r.progressiveCount || 1;
+            const end = start + count - 1;
+            if (slideIdx >= start && slideIdx <= end) return i;
+        }
+        return -1;
+    }
+
+    // 基于光标位置跳转到对应幻灯片（仅在基础幻灯片发生变化时才跳转，避免同一页内“抖动”）
     function gotoSlideByCaret() {
         if (!dom.markdown || !slideLineRanges.length) return;
         const text = dom.markdown.value.replace(/\r/g, '');
@@ -463,17 +484,30 @@ print(a + b)
         const range = slideLineRanges[baseSlideIndex];
         if (!range) return;
 
+        // 目标：始终预览“当前基础幻灯片”的最后一个渐进步骤
         const targetSlideIndex = (range.progressiveStartIndex ?? 0) + (range.progressiveCount ? range.progressiveCount - 1 : 0);
+
+        // 如果当前渐进页已经属于同一张基础幻灯片，且就是最后一个渐进步骤，则不做任何跳转
+        const currentBase = getBaseSlideIndexBySlideIndex(index);
+        if (currentBase === baseSlideIndex && index === targetSlideIndex) {
+            return;
+        }
+
+        // 如果当前不在该基础幻灯片，或者在该基础幻灯片但处于较早的渐进步骤，则跳到最后一步
         if (targetSlideIndex !== index) {
             gotoSlide(targetSlideIndex);
         }
     }
 
-    // 监听 textarea 的点击和键盘事件（上下键、光标移动）
+    // 监听 textarea 的点击和“光标移动”类按键（上下/翻页/Home/End），用于同步当前 PPT 页
     dom.markdown.addEventListener('click', () => gotoSlideByCaret());
-    dom.markdown.addEventListener('keyup', () => gotoSlideByCaret());
-    // 输入时也可能改变光标位置
-    dom.markdown.addEventListener('input', () => gotoSlideByCaret());
+    dom.markdown.addEventListener('keyup', (e) => {
+        const navKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
+        if (navKeys.includes(e.key)) {
+            gotoSlideByCaret();
+        }
+    });
+    // 不在每次输入字符/删除字符时自动跳转，避免编辑时误判导致“跳页”
 
     // 在 setTheme 函数中添加代码高亮主题切换
     function setTheme(theme) {
@@ -1278,6 +1312,7 @@ print(a + b)
         let inUl = false, inOl = false, inTaskList = false, bqDepth = 0, para = '';
         let ulDepth = 0; // 无序列表的嵌套层级
         const ulDepths = []; // 存储每个层级的缩进
+        let blankLineCount = 0; // 连续空行计数，用于普通段落中的额外换行（不影响引用等结构）
 
         const flushPara = () => {
             if (para.trim()) out += `<p>${inlineify(para.trim())}</p>`;
@@ -1334,12 +1369,16 @@ print(a + b)
                 if (inOl) { out += '</ol>'; inOl = false; }
                 // 空行不关闭无序列表，让无序列表可以跨行继续
                 closeQuote();
+                // 记录连续空行数量，稍后在普通段落中统一渲染为 <br>
+                blankLineCount++;
                 continue;
             }
+            // 非空行：后续根据不同块级结构处理 blankLineCount
 
             // Headings
             const h = /^(#{1,6})\s+(.*)$/.exec(line);
             if (h) {
+                blankLineCount = 0;
                 flushPara(); closeLists(); closeQuote();
                 const level = h[1].length;
                 out += `<h${level}>${inlineify(h[2].trim())}</h${level}>`;
@@ -1348,6 +1387,7 @@ print(a + b)
 
             // Tables (GitHub style): header | header\n| --- |\nrows...
             if (looksLikeTable(lines, i)) {
+                blankLineCount = 0;
                 flushPara(); closeLists(); closeQuote();
                 const { tableHtml, nextIndex } = parseTable(lines, i);
                 out += tableHtml;
@@ -1358,6 +1398,7 @@ print(a + b)
             // Blockquote (nested) - 支持原始 > 与转义 &gt;，允许中间空格
             const bq = /^((?:(?:>|\&gt;)\s*)+)(.*)$/.exec(line);
             if (bq) {
+                blankLineCount = 0;
                 flushPara(); closeLists();
                 const markers = bq[1].match(/(?:>|&gt;)/g);
                 const level = markers ? markers.length : 0;
@@ -1372,6 +1413,7 @@ print(a + b)
             // Task list: - [ ] or - [x]
             const task = /^\s*[-+*]\s+\[([ xX])\]\s+(.*)$/.exec(line);
             if (task) {
+                blankLineCount = 0;
                 flushPara(); closeQuote();
                 closeLists(); // 关闭其他列表
                 if (!inTaskList) { out += '<ul class="task-list">'; inTaskList = true; }
@@ -1383,6 +1425,7 @@ print(a + b)
             // Unordered list
             const ul = /^(\s*)[-+*]\s+(.*)$/.exec(line);
             if (ul) {
+                blankLineCount = 0;
                 flushPara(); closeQuote();
                 // 关闭任务列表
                 if (inTaskList) { out += '</ul>'; inTaskList = false; }
@@ -1421,6 +1464,7 @@ print(a + b)
             // Ordered list
             const ol = /^(\s*)\d+[\.)]\s+(.*)$/.exec(line);
             if (ol) {
+                blankLineCount = 0;
                 flushPara(); closeQuote();
                 // 关闭任务列表
                 if (inTaskList) { out += '</ul>'; inTaskList = false; }
@@ -1460,13 +1504,28 @@ print(a + b)
                 continue;
             }
 
-            // Default: paragraph continuation
+            // Default: paragraph continuation（普通段落才使用空行产生的额外 <br>）
+            if (blankLineCount > 0) {
+                const brCount = Math.ceil(blankLineCount / 2);
+                for (let j = 0; j < brCount; j++) {
+                    out += '<br>';
+                }
+                blankLineCount = 0;
+            }
             para += (para ? ' ' : '') + line.trim();
         }
 
         flushPara();
         closeLists();
         closeQuote();
+
+        // 处理结尾处可能存在的空行
+        if (blankLineCount > 0) {
+            const brCount = Math.ceil(blankLineCount / 2);
+            for (let j = 0; j < brCount; j++) {
+                out += '<br>';
+            }
+        }
         return out;
     }
 
@@ -1796,8 +1855,14 @@ print(a + b)
             `;
             document.body.appendChild(overlay);
 
+            // 禁用 / 恢复交互时用到的事件处理函数引用
+            const handlers = {
+                mouse: null,
+                keyboard: null,
+                touch: null,
+            };
+
             // 禁用所有交互元素
-            const keyboardHandlers = [];
             const disableInteractions = () => {
                 // 禁用所有输入框、按钮、选择框
                 document.querySelectorAll('input, textarea, select, button').forEach(el => {
@@ -1818,50 +1883,50 @@ print(a + b)
                     el.style.pointerEvents = 'none';
                     el.style.cursor = 'not-allowed';
                 });
+
                 // 禁用鼠标事件（点击、拖拽等）
-                const preventMouse = (e) => {
+                handlers.mouse = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                     return false;
                 };
-                document.addEventListener('click', preventMouse, true);
-                document.addEventListener('mousedown', preventMouse, true);
-                document.addEventListener('mouseup', preventMouse, true);
-                document.addEventListener('dblclick', preventMouse, true);
-                document.addEventListener('contextmenu', preventMouse, true);
-                document.addEventListener('dragstart', preventMouse, true);
-                keyboardHandlers.push('mouse');
+                document.addEventListener('click', handlers.mouse, true);
+                document.addEventListener('mousedown', handlers.mouse, true);
+                document.addEventListener('mouseup', handlers.mouse, true);
+                document.addEventListener('dblclick', handlers.mouse, true);
+                document.addEventListener('contextmenu', handlers.mouse, true);
+                document.addEventListener('dragstart', handlers.mouse, true);
+
                 // 禁用键盘事件
-                const preventKeyboard = (e) => {
+                handlers.keyboard = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                     return false;
                 };
-                document.addEventListener('keydown', preventKeyboard, true);
-                document.addEventListener('keyup', preventKeyboard, true);
-                document.addEventListener('keypress', preventKeyboard, true);
-                keyboardHandlers.push('keyboard');
+                document.addEventListener('keydown', handlers.keyboard, true);
+                document.addEventListener('keyup', handlers.keyboard, true);
+                document.addEventListener('keypress', handlers.keyboard, true);
+
                 // 禁用触摸事件（移动设备）
-                const preventTouch = (e) => {
+                handlers.touch = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                     return false;
                 };
-                document.addEventListener('touchstart', preventTouch, true);
-                document.addEventListener('touchmove', preventTouch, true);
-                document.addEventListener('touchend', preventTouch, true);
-                keyboardHandlers.push('touch');
+                document.addEventListener('touchstart', handlers.touch, true);
+                document.addEventListener('touchmove', handlers.touch, true);
+                document.addEventListener('touchend', handlers.touch, true);
+
                 // 禁用滚动
                 document.body.style.overflow = 'hidden';
-                overlay.dataset.handlers = keyboardHandlers.join(',');
             };
 
             // 恢复所有交互元素
             const enableInteractions = () => {
-                // 恢复所有输入框
+                // 恢复所有输入框 / 按钮等
                 document.querySelectorAll('[data-export-disabled="true"]').forEach(el => {
                     el.removeAttribute('data-export-disabled');
                     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.tagName === 'BUTTON') {
@@ -1870,17 +1935,36 @@ print(a + b)
                     el.style.pointerEvents = '';
                     el.style.cursor = '';
                 });
-                // 移除键盘事件监听
-                if (overlay.dataset.keyboardHandler === 'true') {
-                    const preventKeyboard = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        return false;
-                    };
-                    document.removeEventListener('keydown', preventKeyboard, true);
-                    document.removeEventListener('keyup', preventKeyboard, true);
-                    document.removeEventListener('keypress', preventKeyboard, true);
+
+                // 移除鼠标事件监听
+                if (handlers.mouse) {
+                    document.removeEventListener('click', handlers.mouse, true);
+                    document.removeEventListener('mousedown', handlers.mouse, true);
+                    document.removeEventListener('mouseup', handlers.mouse, true);
+                    document.removeEventListener('dblclick', handlers.mouse, true);
+                    document.removeEventListener('contextmenu', handlers.mouse, true);
+                    document.removeEventListener('dragstart', handlers.mouse, true);
+                    handlers.mouse = null;
                 }
+
+                // 移除键盘事件监听
+                if (handlers.keyboard) {
+                    document.removeEventListener('keydown', handlers.keyboard, true);
+                    document.removeEventListener('keyup', handlers.keyboard, true);
+                    document.removeEventListener('keypress', handlers.keyboard, true);
+                    handlers.keyboard = null;
+                }
+
+                // 移除触摸事件监听
+                if (handlers.touch) {
+                    document.removeEventListener('touchstart', handlers.touch, true);
+                    document.removeEventListener('touchmove', handlers.touch, true);
+                    document.removeEventListener('touchend', handlers.touch, true);
+                    handlers.touch = null;
+                }
+
+                // 恢复滚动
+                document.body.style.overflow = '';
             };
 
             // 禁用交互
@@ -2012,6 +2096,12 @@ print(a + b)
             } catch (err) {
                 console.error('导出 PDF 失败', err);
             } finally {
+                // 恢复所有交互
+                enableInteractions();
+                // 移除遮罩层
+                if (overlay && overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
                 // 恢复按钮状态
                 btn.disabled = false;
                 btn.textContent = originalText;
