@@ -1277,16 +1277,16 @@ print(a + b)
                 if (formulas.length > 1) {
                     // 多个公式，每个单独渲染
                     return formulas.map(formula =>
-                        `<div class="katex-display-wrapper">$$${formula.trim()}$$</div>`
+                        `<div class="katex-display-wrapper">$$${escapeLatexForHtml(formula.trim())}$$</div>`
                     ).join('\n');
                 } else {
                     // 单个公式，保留原始格式（包括换行符）
-                    return `<div class="katex-display-wrapper">${latex}</div>`;
+                    return `<div class="katex-display-wrapper">${escapeLatexForHtml(latex)}</div>`;
                 }
             }
 
             // 对于 \[...\] 格式，保持原样
-            return latex;
+            return escapeLatexForHtml(latex);
         });
         // 8. 恢复提示块
         text = text.replace(/\uE003ADMON(\d+)\uE003/g, (_, i) => admonitions[Number(i)] || '');
@@ -1790,6 +1790,10 @@ print(a + b)
         return s;
     }
 
+    // 仅用于 LaTeX 块恢复阶段的 HTML 转义，防止 < > 等符号被当作标签导致 DOM 破坏
+    function escapeLatexForHtml(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
     function escapeHtml(s) {
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
