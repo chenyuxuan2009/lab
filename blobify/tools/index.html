@@ -1,0 +1,400 @@
+<!-- tool.html -->
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>GIF 帧定位生成工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .canvas-container {
+            position: relative;
+            border: 1px solid #ccc;
+            display: inline-block;
+        }
+
+        .overlay {
+            position: absolute;
+            border: 2px dashed red;
+            background: rgba(255, 0, 0, 0.2);
+            cursor: move;
+            transform-origin: center center;
+            border-top: 4px solid blue;
+            /* 顶部加粗变蓝区分方向 */
+        }
+
+        .overlay::after {
+            content: '顶部';
+            position: absolute;
+            top: -24px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: blue;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .overlay::before {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: blue;
+            border-radius: 50%;
+            top: calc(50% + var(--offy, 0px));
+            left: calc(50% + var(--offx, 0px));
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .center-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 0, 0, 0.5);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 300px;
+        }
+
+        textarea {
+            height: 200px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <input type="file" id="gifUpload" accept="image/gif">
+        <br><br>
+        <div class="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div id="overlay" class="overlay" style="display:none; width:80px; height:80px;">
+                <div class="center-dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3 id="frameInfo">帧数: 0 / 0</h3>
+
+        <button id="pickCenterBtn" style="background:#ff9800; color:white; border:none; padding:8px; cursor:pointer;">1.
+            点击激活: 在画布上点选中心位置</button>
+
+        <label style="display:flex; align-items:center; gap:5px;">
+            缩放:
+            <input type="range" id="scale" min="0" max="3" step="0.01" value="1" style="flex:1">
+            <input type="number" id="scaleNum" min="0" max="3" step="0.01" value="1" style="width: 50px;">
+        </label>
+
+        <label style="display:flex; align-items:center; gap:5px;">
+            旋转:
+            <input type="range" id="rot" min="-180" max="180" step="1" value="0" style="flex:1">
+            <input type="number" id="rotNum" min="-180" max="180" step="1" value="0" style="width: 50px;">
+        </label>
+        <label style="display:flex; align-items:center; gap:5px; border-top:1px solid #ddd; padding-top: 10px;">
+            中心偏移X:
+            <input type="range" id="offsetX" min="-2000" max="2000" step="1" value="0" style="flex:1">
+            <input type="number" id="offsetXNum" step="1" value="0" style="width: 50px;">
+        </label>
+
+        <label style="display:flex; align-items:center; gap:5px;">
+            中心偏移Y:
+            <input type="range" id="offsetY" min="-2000" max="2000" step="1" value="0" style="flex:1">
+            <input type="number" id="offsetYNum" step="1" value="0" style="width: 50px;">
+        </label>
+        <div style="margin-top: 10px; display: flex; gap: 5px;">
+            <button id="prevBtn" style="padding:8px; flex: 1;">上一帧</button>
+            <button id="nextBtn" style="padding:8px; flex: 1;">下一帧</button>
+            <button id="nextSaveBtn"
+                style="padding:8px; background:#4CAF50; color:white; border:none; flex: 1;">下一帧并保存</button>
+            <button id="playBtn" style="padding:8px; background:#9c27b0; color:white; border:none; flex: 1;">▶
+                播放预览</button>
+        </div>
+
+        <button id="importBtn"
+            style="background: #2196F3; color: white; border: none; padding: 8px; margin-top: 5px;">导入 JSON 配置</button>
+        <button id="exportBtn">导出 JSON 配置</button>
+        <textarea id="output" placeholder="粘贴或导出 JSON 数组，例如：[{\" x\":141,...}]"></textarea>
+    </div>
+
+    <script type="module">
+        import { parseGIF, decompressFrames } from 'https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm';
+
+        let frames = [], currentFrame = 0, configData = [];
+        let renderedFrames = []; // 加入预渲染缓存
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+
+        let posX = 0, posY = 0;
+        let isDragging = false, startX, startY, initialX, initialY;
+        let playTimer = null;
+        let isPlaying = false;
+
+        document.getElementById('gifUpload').onchange = async (e) => {
+            const buffer = await e.target.files[0].arrayBuffer();
+            frames = decompressFrames(parseGIF(buffer), true);
+            canvas.width = frames[0].dims.width; canvas.height = frames[0].dims.height;
+
+            // 预渲染计算所有帧解决透明抽帧的花屏问题
+            renderedFrames = [];
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+
+            for (let i = 0; i < frames.length; i++) {
+                const frame = frames[i];
+                if (i > 0 && frames[i - 1].disposalType === 2) {
+                    tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                }
+                const patchData = new Uint8ClampedArray(frame.patch || frame.pixels);
+                const patchCanvas = document.createElement('canvas');
+                patchCanvas.width = frame.dims.width; patchCanvas.height = frame.dims.height;
+                const pCtx = patchCanvas.getContext('2d');
+                pCtx.putImageData(new ImageData(patchData, frame.dims.width, frame.dims.height), 0, 0);
+                tCtx.drawImage(patchCanvas, frame.dims.left, frame.dims.top);
+
+                const savedState = document.createElement('canvas');
+                savedState.width = tempCanvas.width; savedState.height = tempCanvas.height;
+                savedState.getContext('2d').drawImage(tempCanvas, 0, 0);
+                renderedFrames.push(savedState);
+            }
+
+            posX = canvas.width / 2; posY = canvas.height / 2;
+            configData = frames.map(() => ({ x: Math.round(posX), y: Math.round(posY), scale: 1, rotation: 0, offsetX: 0, offsetY: 0 }));
+            overlay.style.display = 'block';
+            renderFrame();
+        };
+
+        function renderFrame() {
+            document.getElementById('frameInfo').innerText = `当前帧: ${currentFrame + 1} / ${frames.length}`;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (renderedFrames[currentFrame]) {
+                ctx.drawImage(renderedFrames[currentFrame], 0, 0);
+            }
+
+            // 恢复当前帧的配置
+            const c = configData[currentFrame];
+            posX = c.x; posY = c.y;
+            document.getElementById('scale').value = c.scale;
+            document.getElementById('scaleNum').value = c.scale;
+            document.getElementById('rot').value = c.rotation;
+            document.getElementById('rotNum').value = c.rotation;
+            document.getElementById('offsetX').value = c.offsetX;
+            document.getElementById('offsetXNum').value = c.offsetX;
+            document.getElementById('offsetY').value = c.offsetY;
+            document.getElementById('offsetYNum').value = c.offsetY;
+            updateOverlay();
+        }
+
+        function updateOverlay() {
+            const scale = document.getElementById('scale').value;
+            const rot = document.getElementById('rot').value;
+            const offX = document.getElementById('offsetX').value;
+            const offY = document.getElementById('offsetY').value;
+            const size = 80 * scale; // 基准大小80
+            const scaledOffX = offX * scale;
+            const scaledOffY = offY * scale;
+
+            overlay.style.width = size + 'px';
+            overlay.style.height = size + 'px';
+            overlay.style.left = (posX - size / 2 - scaledOffX) + 'px';
+            overlay.style.top = (posY - size / 2 - scaledOffY) + 'px';
+            overlay.style.transformOrigin = `${size / 2 + scaledOffX}px ${size / 2 + scaledOffY}px`;
+            overlay.style.transform = `rotate(${rot}deg)`;
+            overlay.style.setProperty('--offx', scaledOffX + 'px');
+            overlay.style.setProperty('--offy', scaledOffY + 'px');
+
+            configData[currentFrame] = {
+                x: Math.round(posX), y: Math.round(posY),
+                scale: parseFloat(scale), rotation: parseInt(rot),
+                offsetX: parseInt(offX), offsetY: parseInt(offY)
+            };
+        }
+
+        // 拖拽逻辑
+        overlay.onmousedown = (e) => {
+            isDragging = true; startX = e.clientX; startY = e.clientY;
+            initialX = posX; initialY = posY;
+        };
+        window.onmousemove = (e) => {
+            if (!isDragging) return;
+            posX = initialX + (e.clientX - startX);
+            posY = initialY + (e.clientY - startY);
+            updateOverlay();
+        };
+        window.onmouseup = () => isDragging = false;
+
+        // 双向绑定输入框与滑推
+        const scaleRange = document.getElementById('scale');
+        const scaleNum = document.getElementById('scaleNum');
+        const rotRange = document.getElementById('rot');
+        const rotNum = document.getElementById('rotNum');
+        const offXRange = document.getElementById('offsetX');
+        const offXNum = document.getElementById('offsetXNum');
+        const offYRange = document.getElementById('offsetY');
+        const offYNum = document.getElementById('offsetYNum');
+
+        scaleRange.oninput = (e) => { scaleNum.value = e.target.value; updateOverlay(); };
+        scaleNum.oninput = (e) => { scaleRange.value = e.target.value; updateOverlay(); };
+        rotRange.oninput = (e) => { rotNum.value = e.target.value; updateOverlay(); };
+        rotNum.oninput = (e) => { rotRange.value = e.target.value; updateOverlay(); };
+        offXRange.oninput = (e) => { offXNum.value = e.target.value; updateOverlay(); };
+        offXNum.oninput = (e) => { offXRange.value = e.target.value; updateOverlay(); };
+        offYRange.oninput = (e) => { offYNum.value = e.target.value; updateOverlay(); };
+        offYNum.oninput = (e) => { offYRange.value = e.target.value; updateOverlay(); };
+
+        // 点击拾取中心点逻辑
+        let isPickingCenter = false;
+        const pickCenterBtn = document.getElementById('pickCenterBtn');
+        pickCenterBtn.onclick = () => {
+            isPickingCenter = !isPickingCenter;
+            if (isPickingCenter) {
+                pickCenterBtn.textContent = "正在拾取 (请点击左侧画布)";
+                pickCenterBtn.style.background = "#f44336";
+                canvas.style.cursor = "crosshair";
+            } else {
+                pickCenterBtn.textContent = "1. 点击激活: 在画布上点选中心位置";
+                pickCenterBtn.style.background = "#ff9800";
+                canvas.style.cursor = "default";
+            }
+        };
+
+        canvas.onmousedown = (e) => {
+            if (isPickingCenter) {
+                const rect = canvas.getBoundingClientRect();
+                posX = e.clientX - rect.left;
+                posY = e.clientY - rect.top;
+                updateOverlay();
+
+                // 拾取完成后自动关闭
+                isPickingCenter = false;
+                pickCenterBtn.textContent = "1. 点击激活: 在画布上点选中心位置";
+                pickCenterBtn.style.background = "#ff9800";
+                canvas.style.cursor = "default";
+            }
+        };
+
+        document.getElementById('prevBtn').onclick = () => {
+            if (currentFrame > 0) {
+                currentFrame--;
+                renderFrame();
+            }
+        };
+
+        document.getElementById('nextBtn').onclick = () => {
+            if (currentFrame < frames.length - 1) {
+                currentFrame++; renderFrame();
+            }
+        };
+
+        document.getElementById('nextSaveBtn').onclick = () => {
+            if (currentFrame < frames.length - 1) {
+                // 继承当前帧的数据到下一帧，方便继续微调
+                configData[currentFrame + 1] = { ...configData[currentFrame] };
+                currentFrame++; renderFrame();
+            }
+        };
+
+        const playBtn = document.getElementById('playBtn');
+        playBtn.onclick = () => {
+            if (!frames.length) return;
+
+            if (isPlaying) {
+                clearInterval(playTimer);
+                playTimer = null;
+                isPlaying = false;
+                playBtn.textContent = "▶ 播放预览";
+                overlay.style.display = 'block';
+                return;
+            }
+
+            isPlaying = true;
+            playBtn.textContent = "⏸ 停止播放";
+
+            let delayAccumulator = 0;
+            let lastTime = performance.now();
+
+            const loop = (time) => {
+                if (!isPlaying) return;
+
+                const delta = time - lastTime;
+                lastTime = time;
+                delayAccumulator += delta;
+
+                const delayToWait = Math.max(frames[currentFrame]?.delay || 100, 20);
+                if (delayAccumulator > delayToWait) {
+                    delayAccumulator -= delayToWait;
+                    currentFrame = (currentFrame + 1) % frames.length;
+                    renderFrame();
+                }
+
+                playTimer = requestAnimationFrame(loop);
+            };
+
+            playTimer = requestAnimationFrame(loop);
+        };
+
+        document.getElementById('exportBtn').onclick = () => {
+            document.getElementById('output').value = JSON.stringify(configData, null, 2);
+        };
+
+        function normalizeConfigEntry(entry) {
+            return {
+                x: entry?.x ?? 0,
+                y: entry?.y ?? 0,
+                scale: entry?.scale ?? 1,
+                rotation: entry?.rotation ?? 0,
+                offsetX: entry?.offsetX ?? 0,
+                offsetY: entry?.offsetY ?? 0
+            };
+        }
+
+        document.getElementById('importBtn').onclick = () => {
+            try {
+                const loaded = JSON.parse(document.getElementById('output').value);
+                if (!Array.isArray(loaded)) {
+                    throw new Error('JSON 必须是数组');
+                }
+                if (loaded.length === 0) {
+                    throw new Error('JSON 数组不能为空');
+                }
+
+                const normalized = loaded.map(normalizeConfigEntry);
+                const targetLength = frames.length > 0 ? frames.length : normalized.length;
+                const fallbackEntry = normalized[normalized.length - 1];
+                configData = Array.from({ length: targetLength }, (_, i) => normalizeConfigEntry(normalized[i] ?? fallbackEntry));
+
+                if (frames.length > 0) {
+                    currentFrame = Math.min(currentFrame, configData.length - 1);
+                } else {
+                    currentFrame = 0;
+                }
+                renderFrame();
+                alert("导入成功！");
+            } catch (err) {
+                alert("解析失败，请确保粘贴的是合法 JSON 数组。错误: " + err.message);
+            }
+        };
+
+    </script>
+</body>
+
+</html>

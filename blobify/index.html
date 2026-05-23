@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>表情包生成器</title>
+    <link rel="preconnect" href="https://fonts.loli.com">
+    <link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin>
+    <link href="https://fonts.loli.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="icon" href="favicon.ico">
+    <script src="https://testingcf.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="title">
+            <h1>表情包生成器</h1>
+            <p>输入 QQ 号或上传头像，生成属于你的表情包 GIF</p>
+        </div>
+
+        <div class="main-card">
+            <div class="left">
+                <div class="tabs">
+                    <div class="tab active" data-tab="qq">输入 QQ 号</div>
+                    <div class="tab" data-tab="upload">上传头像</div>
+                </div>
+
+                <div class="panel active" id="qqPanel">
+                    <div class="input-group">
+                        <label for="qqInput">QQ 号码</label>
+                        <div class="field-row">
+                            <input type="text" id="qqInput" placeholder="例如：123456789">
+                            <button id="fetchQqBtn" class="btn" type="button">确认并获取头像</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" id="uploadPanel">
+                    <div class="input-group">
+                        <label for="avatarUpload">上传本地头像</label>
+                        <div class="upload-box" id="uploadBox">
+                            <input type="file" id="avatarUpload" accept="image/png, image/jpeg, image/jpg" hidden>
+                            <p style="margin: 0;">点击上传头像</p>
+                            <strong>支持 PNG / JPG / JPEG</strong>
+                            <div class="upload-meta">建议使用正方形图片，效果更稳</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right">
+                <div class="avatar-preview">
+                    <div class="avatar-placeholder" id="avatarPlaceholder">
+                        <div id="defaultAvatarIcon">🙂</div>
+                        <img id="userAvatarPreview" src="assets/img/baobaoloong.png" alt="头像预览" style="display:block;">
+                    </div>
+                </div>
+                <div class="preview-text" id="placeholderText">默认头像已就绪，可直接生成</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">预设表情包</div>
+            <div class="section-desc">点击下方模板快速生成</div>
+
+            <div class="gif-grid">
+                <div class="project-card" data-gif="assets/gifs/nailoong_1.gif"
+                    data-config="assets/configs/nailoongConfig1.json" data-name="nailoong1">
+                    <img class="preview" src="assets/gifs/nailoong_1.gif" alt="摇摆奶龙预览">
+                    <h3>奶龙 1</h3>
+                    <p>点击生成并预览</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="site-footer" id="siteFooter">
+            <p>
+                © 2026 <a class="footer-link" href="https://github.com/Caylex09" target="_blank"
+                    rel="noopener noreferrer">Caylex</a> ·
+                Built with ❤️ ·
+                <a class="footer-link" href="https://github.com/Caylex09/image" target="_blank"
+                    rel="noopener noreferrer">GitHub</a>
+            </p>
+        </footer>
+    </div>
+
+    <div id="resultModal">
+        <div class="modal-content">
+            <h3>生成结果</h3>
+            <p id="modalStatusText" style="color: #6f63ff;">准备生成...</p>
+            <img id="resultImg" alt="合成结果">
+            <div class="modal-actions">
+                <button id="downloadBtn" class="btn btn-success" style="display: none;" type="button">下载动图</button>
+                <button id="closeModalBtn" class="btn btn-secondary" type="button">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
