@@ -1,4 +1,4 @@
-import { parseGIF, decompressFrames } from 'https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/+esm';
+import { parseGIF, decompressFrames } from 'https://testingcf.jsdelivr.net/npm/gifuct-js@2.1.2/+esm';
 
 // UI Elements: Avatar setup
 const avatarUpload = document.getElementById('avatarUpload');
@@ -172,7 +172,7 @@ async function generateGif(gifUrl, configUrl, exportName) {
     const frames = decompressFrames(gif, true);
 
     modalStatusText.textContent = "3. 正在合成中 (这可能需要几秒钟)...";
-    const workerStr = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js').then(r => r.text());
+    const workerStr = await fetch('https://testingcf.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js').then(r => r.text());
     const workerBlob = new Blob([workerStr], { type: 'application/javascript' });
 
     const gifGenerator = new GIF({
